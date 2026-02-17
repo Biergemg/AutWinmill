@@ -1,0 +1,11 @@
+summary: "Einstein Kids - Moms No-Show Sequence"
+description: "Triggers a re-engagement sequence for mothers who did not attend the event."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+  required:
+    - lead_id
+language: python3

@@ -1,0 +1,10 @@
+summary: "Einstein Kids - Job Runner Cron"
+description: "Cron-triggered script to process scheduled jobs in the ek_jobs table."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    pg_resource:
+      type: object
+      description: "Postgres resource"
+language: python3

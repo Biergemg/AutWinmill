@@ -1,0 +1,60 @@
+summary: "Einstein Kids - YCloud Webhook Inbound"
+description: "Validates and processes inbound YCloud messages."
+language: python3
+content: |
+  from __future__ import annotations
+  import hashlib
+  import hmac
+  import json
+  import os
+  import time
+
+  def parse_sig(sig_header: str) -> tuple[str | None, str | None]:
+      parts = {}
+      for p in (sig_header or "").split(","):
+          if "=" in p:
+              k, v = p.split("=", 1)
+              parts[k.strip()] = v.strip()
+      return parts.get("t"), parts.get("v1")
+
+  def verify(secret: str, body: str, signature: str, timestamp: str) -> bool:
+      try:
+          ts = int(timestamp)
+      except Exception:
+          return False
+      if abs(int(time.time()) - ts) > 300:
+          return False
+      computed = hmac.new(secret.encode("utf-8"), f"{timestamp}.{body}".encode("utf-8"), hashlib.sha256).hexdigest()
+      return hmac.compare_digest(computed, signature)
+
+  def main(payload: dict, headers: dict | None = None, ycloud_secret: str | None = None) -> dict:
+      headers = headers or {}
+      if not isinstance(payload, dict):
+          return {"ok": False, "error": "invalid_payload"}
+
+      require_sig = bool(ycloud_secret) or os.getenv("ALLOW_INSECURE_WEBHOOK", "false").lower() not in ("1", "true", "yes")
+      if require_sig:
+          sig_header = headers.get("x-ycloud-signature") or headers.get("X-YCloud-Signature") or ""
+          ts, sig = parse_sig(sig_header)
+          body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False)
+          if not (ycloud_secret and ts and sig and verify(ycloud_secret, body, sig, ts)):
+              return {"ok": False, "error": "invalid_signature"}
+
+      entry = payload.get("entry", [])
+      if not entry:
+          return {"ok": True, "action": "NO_MESSAGES"}
+      changes = entry[0].get("changes", [])
+      if not changes:
+          return {"ok": True, "action": "NO_MESSAGES"}
+      msgs = changes[0].get("value", {}).get("messages", [])
+      if not msgs:
+          return {"ok": True, "action": "NO_MESSAGES"}
+
+      message = msgs[0]
+      return {
+          "ok": True,
+          "action": "STORED",
+          "message_id": message.get("id"),
+          "from": message.get("from"),
+          "type": message.get("type"),
+      }

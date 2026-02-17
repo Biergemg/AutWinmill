@@ -1,0 +1,13 @@
+summary: "Einstein Kids - Compute Attendance"
+description: "Calculates attendance metrics from Zoom webhook data for a lead."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+    zoom_data:
+      type: object
+  required:
+    - lead_id
+language: python3

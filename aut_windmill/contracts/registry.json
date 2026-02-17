@@ -1,0 +1,4 @@
+{
+  "order_created": "contracts/schemas/order_created.schema.json",
+  "payment_captured": "contracts/schemas/payment_captured.schema.json"
+}

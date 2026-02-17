@@ -1,0 +1,13 @@
+summary: "Einstein Kids - Payment Claim Create"
+description: "Creates a new payment claim record when a lead reports a purchase."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+    amount:
+      type: number
+  required:
+    - lead_id
+language: python3

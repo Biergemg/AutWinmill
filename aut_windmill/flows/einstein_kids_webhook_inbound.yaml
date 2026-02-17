@@ -1,0 +1,62 @@
+flow: einstein_kids_webhook_inbound
+version: 1.0.0
+description: Procesa webhooks entrantes de WhatsApp (YCloud) y ejecuta acciones
+
+steps:
+  # 1. Recibir webhook
+  - name: receive_webhook
+    type: http_webhook
+    output: webhook_data
+    
+  # 2. Validar firma y estructura
+  - name: validate_webhook
+    type: script
+    language: python
+    entry: ../shared/ycloud_webhook_inbound.py
+    args:
+      - ${webhook_data}
+    output: validation_result
+    on_failure: send_to_dlq
+    
+  # 3. Procesar según tipo de mensaje
+  - name: process_inbound_message
+    type: switch
+    condition: ${validation_result.message_type}
+    cases:
+      - value: "text"
+        steps:
+          - name: handle_text_message
+            type: script
+            language: python
+            entry: ../shared/process_text_message.py
+            args:
+              - ${validation_result}
+            output: text_result
+            
+      - value: "interactive"
+        steps:
+          - name: handle_interactive_message
+            type: script
+            language: python
+            entry: ../shared/process_interactive_message.py
+            args:
+              - ${validation_result}
+            output: interactive_result
+            
+      - default: true
+        steps:
+          - name: log_unsupported_type
+            type: sql
+            entry: scripts/core/insert_audit.sql
+            args:
+              actor: "system"
+              action: "unsupported_message_type"
+              target_type: "message"
+              target_id: ${validation_result.message_id}
+              metadata: ${validation_result}
+
+failure_handlers:
+  - name: send_to_dlq
+    type: script
+    language: python
+    entry: scripts/core/requeue_event.py

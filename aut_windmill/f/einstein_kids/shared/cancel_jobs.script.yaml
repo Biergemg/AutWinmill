@@ -1,0 +1,11 @@
+summary: "Einstein Kids - Cancel Jobs"
+description: "Cancels all scheduled jobs for a specific lead (e.g., after purchase or unsubscribe)."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+  required:
+    - lead_id
+language: python3

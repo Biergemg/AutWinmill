@@ -1,0 +1,45 @@
+# Configuración de Prometheus para monitoreo del ecosistema Cyn
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Monitoreo del propio Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Monitoreo de PostgreSQL
+  - job_name: 'postgres-cyn'
+    static_configs:
+      - targets: ['postgres-cyn:5432']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Monitoreo de Windmill
+  - job_name: 'windmill-cyn'
+    static_configs:
+      - targets: ['windmill-cyn:8000']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Monitoreo de Redis
+  - job_name: 'redis-cyn'
+    static_configs:
+      - targets: ['redis-cyn:6379']
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Monitoreo de servicios de Einstein Kids
+  - job_name: 'einstein-kids-services'
+    static_configs:
+      - targets: ['windmill-cyn:8000']
+    scrape_interval: 60s
+    metrics_path: /api/einstein-kids/metrics
+    params:
+      service: ['ai_agent', 'calendly', 'zoom', 'ycloud']

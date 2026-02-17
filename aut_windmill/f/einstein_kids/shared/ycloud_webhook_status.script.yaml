@@ -1,0 +1,11 @@
+summary: "Einstein Kids - YCloud Webhook Status"
+description: "Processes delivery and read status updates for sent WhatsApp messages."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    payload:
+      type: object
+  required:
+    - payload
+language: python3

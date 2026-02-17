@@ -1,0 +1,59 @@
+flow: einstein_kids_moms_funnel
+version: 1.0.0
+description: Flujo completo para funnel de mamás - desde opt-in hasta cierre de venta
+
+steps:
+  # 1. Entrada de lead
+  - name: receive_lead_optin
+    type: http_webhook
+    output: lead_data
+    
+  # 2. Validar y crear lead
+  - name: validate_and_create_lead
+    type: script
+    language: python
+    entry: ../shared/upsert_lead.py
+    args:
+      - ${lead_data}
+    output: lead_result
+    on_failure: send_to_dlq
+    
+  # 3. Programar secuencia de mensajes
+  - name: schedule_pre_event_sequence
+    type: script
+    language: python
+    entry: ../shared/schedule_jobs.py
+    args:
+      lead_id: ${lead_result.lead_id}
+      event_start_at: ${lead_data.event_start_at}
+      avatar: ${lead_data.avatar_hint}
+    condition: ${lead_result.is_new}
+    
+  # 4. Enviar mensaje de bienvenida
+  - name: send_welcome_message
+    type: script
+    language: python
+    entry: ../shared/ycloud_send_template.py
+    args:
+      lead_id: ${lead_result.lead_id}
+      template_key: "welcome_moms"
+      variables:
+        name: ${lead_data.name}
+    condition: ${lead_result.is_new}
+    
+  # 5. Registrar evento
+  - name: log_lead_created
+    type: sql
+    entry: scripts/core/insert_audit.sql
+    args:
+      actor: "system"
+      action: "lead_created"
+      target_type: "lead"
+      target_id: ${lead_result.lead_id}
+      metadata: ${lead_data}
+
+failure_handlers:
+  - name: send_to_dlq
+    type: script
+    language: python
+    entry: scripts/core/requeue_event.py

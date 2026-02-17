@@ -1,0 +1,53 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.egg-info/
+.venv/
+venv/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment and secrets
+.env
+.env.*
+*.env
+*.pem
+*.key
+credentials.yaml
+credentials.yml
+*credentials*.txt
+*credentials*.yaml
+*credentials*.yml
+
+# Local runtime artifacts
+*.log
+*.pid
+tmp/
+temp/
+
+# Generated / caches inside repo
+aut_windmill/node_modules/
+aut_windmill/**/__pycache__/
+aut_windmill/.pytest_cache/
+aut_windmill/.coverage
+aut_windmill/tests/**/__pycache__/
+aut_windmill/scripts/**/__pycache__/
+aut_windmill/src/**/__pycache__/
+

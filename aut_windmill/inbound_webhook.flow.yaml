@@ -1,0 +1,20 @@
+summary: "Einstein Kids - Inbound Webhook Flow"
+description: "Flow orchestrator for processing inbound WhatsApp messages from YCloud."
+value:
+  modules:
+    - id: process_webhook
+      summary: "Process Webhook Payload"
+      type: script
+      path: u/admin/einstein_kids/shared/ycloud_webhook_inbound
+      args:
+        payload: "${flow_input.payload}"
+        signature: "${flow_input.signature}"
+schema:
+  type: object
+  properties:
+    payload:
+      type: object
+    signature:
+      type: string
+  required:
+    - payload

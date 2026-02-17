@@ -1,0 +1,14 @@
+summary: "Einstein Kids - YCloud Send Template"
+description: "Sends a WhatsApp template message using the YCloud API."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+    template_name:
+      type: string
+  required:
+    - lead_id
+    - template_name
+language: python3

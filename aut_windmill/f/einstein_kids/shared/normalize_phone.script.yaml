@@ -1,0 +1,11 @@
+summary: "Einstein Kids - Normalize Phone"
+description: "Normalizes phone numbers to E.164 format for WhatsApp compatibility."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    phone:
+      type: string
+  required:
+    - phone
+language: python3

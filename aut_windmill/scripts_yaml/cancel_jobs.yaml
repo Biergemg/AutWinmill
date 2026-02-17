@@ -1,0 +1,25 @@
+summary: "Einstein Kids - Cancel Scheduled Jobs"
+description: "Cancel all scheduled jobs for a lead."
+language: python3
+content: |
+  from __future__ import annotations
+  import psycopg2
+
+  def main(lead_id: str, pg_resource: dict) -> dict:
+      if not lead_id:
+          return {"ok": False, "error": "missing_lead_id"}
+      conn = psycopg2.connect(**pg_resource)
+      try:
+          with conn.cursor() as cur:
+              cur.execute(
+                  "UPDATE ek_jobs SET status='cancelled', updated_at=NOW() WHERE lead_id=%s AND status='scheduled'",
+                  (lead_id,),
+              )
+              cancelled = cur.rowcount
+          conn.commit()
+          return {"ok": True, "lead_id": lead_id, "cancelled": cancelled}
+      except Exception as e:
+          conn.rollback()
+          return {"ok": False, "error": str(e)}
+      finally:
+          conn.close()

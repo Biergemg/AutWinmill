@@ -1,0 +1,14 @@
+{
+  "event_name": "payment_captured",
+  "version": "1.0.0",
+  "event_id": "evt_pay_001",
+  "trace_id": "trace_pay_abc",
+  "occurred_at": "2026-01-27T13:00:00Z",
+  "payment_id": "pay_123",
+  "order_id": "ord_456",
+  "amount": 149.99,
+  "currency": "USD",
+  "method": "card",
+  "status": "captured",
+  "metadata": { "processor": "stripe", "country": "US" }
+}

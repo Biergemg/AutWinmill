@@ -1,0 +1,11 @@
+summary: "Einstein Kids - Upsert Lead"
+description: "Deduplicates and updates lead information in the ek_leads table."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_data:
+      type: object
+  required:
+    - lead_data
+language: python3

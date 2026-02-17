@@ -1,0 +1,61 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "windmill-automation"
+version = "0.1.0"
+description = "Automatizaciones Windmill - arquitectura hexagonal, validación y orquestación"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.6.0",
+  "jsonschema>=4.19.0",
+  "pytest>=7.4.0",
+  "pytest-cov>=4.1.0",
+  "hypothesis>=6.88.0",
+  "radon>=6.0.1",
+  "flake8>=7.0.0",
+  "flake8-cognitive-complexity>=0.1.0",
+  "ruff>=0.1.9",
+  "black>=24.4.2",
+  "isort>=5.13.2",
+  "mypy>=1.6.1",
+  "sqlfluff>=2.3.5",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "B", "C4"]
+ignore = ["E203", "W503"]
+exclude = ["ops/", "flows/", "resources/", "contracts/"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+show_error_codes = true
+pretty = true
+exclude = "(ops/|flows/|resources/|contracts/)"
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "scripts/core"]
+addopts = "--maxfail=1 -q"
+
+[tool.sqlfluff]
+dialect = "postgres"
+exclude_rules = ["L001"]

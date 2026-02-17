@@ -1,0 +1,186 @@
+summary: "Einstein Kids - Job Runner Cron"
+description: "Cron-triggered script to process scheduled jobs in the ek_jobs table."
+language: python3
+content: |
+  """
+  Windmill script: job_runner_cron.py
+  Executes pending jobs from ek_jobs.
+  """
+  from __future__ import annotations
+  import logging
+  import os
+  import yaml
+  import traceback
+  from datetime import datetime
+  
+  import psycopg2
+  from psycopg2.extras import RealDictCursor
+  
+  # Local helper imports
+  from .ycloud_send_template import main as ycloud_send_template
+  
+  logging.basicConfig(level=logging.INFO)
+  logger = logging.getLogger(__name__)
+  
+  def load_templates_config():
+      try:
+          base_path = os.path.dirname(os.path.abspath(__file__))
+          config_path = os.path.join(base_path, "../../../resources/einstein_kids/templates.yaml")
+          with open(config_path, 'r') as f:
+              return yaml.safe_load(f).get("templates", {})
+      except Exception as e:
+          logger.error(f"Failed to load templates.yaml: {e}")
+          return {}
+  
+  def get_template_info(job_type: str, avatar: str, templates_config: dict):
+      # Mapping logic: avatar 'mother' -> suffix 'moms', 'therapist' -> 'therapists'
+      # This is a bit brittle, but follows the plan's naming convention.
+      suffix = "moms" if avatar == "mother" else "therapists"
+      
+      # Construct candidate keys
+      # 1. Exact match (e.g. 'welcome_moms')
+      key1 = f"{job_type}_{suffix}"
+      # 2. Generic match (e.g. 'reminder_24h' might be shared? yaml shows reminder_24h without suffix in example?)
+      # Let's check yaml content from previous steps. 
+      # templates.yaml showed: welcome_moms, welcome_therapists, reminder_24h.
+      # reminder_24h didn't have suffix.
+      key2 = job_type
+      
+      if key1 in templates_config:
+          return templates_config[key1]
+      if key2 in templates_config:
+          return templates_config[key2]
+          
+      return None
+  
+  def main(pg_resource: dict = None) -> dict:
+      
+      conn = None
+      exec_count = 0
+      errors = 0
+      
+      templates_config = load_templates_config()
+      if not templates_config:
+          return {"ok": False, "error": "templates_config_missing"}
+  
+      try:
+          conn = psycopg2.connect(**pg_resource)
+          # Use simple cursor for updates, dictate for selects is fine
+          cur = conn.cursor(cursor_factory=RealDictCursor)
+          
+          # 1. Fetch pending jobs
+          # FOR UPDATE SKIP LOCKED is vital for concurrency if multiple runners exist (Windmill might scale)
+          cur.execute("""
+              SELECT j.job_id, j.lead_id, j.job_type, j.run_at, 
+                     l.phone_normalized, l.avatar, l.name, l.event_start_at
+              FROM ek_jobs j
+              JOIN ek_leads l ON j.lead_id = l.lead_id
+              WHERE j.status = 'scheduled' 
+                AND j.run_at <= NOW()
+                AND j.attempts < 3
+              ORDER BY j.run_at ASC
+              LIMIT 50
+              FOR UPDATE OF j SKIP LOCKED
+          """)
+          
+          jobs = cur.fetchall()
+          
+          for job in jobs:
+              job_id = job["job_id"]
+              lead_id = job["lead_id"]
+              job_type = job["job_type"]
+              avatar = job["avatar"]
+              
+              try:
+                  # 2. Resolve Template
+                  tmpl_info = get_template_info(job_type, avatar, templates_config)
+                  if not tmpl_info:
+                      raise ValueError(f"No template found for job '{job_type}' avatar '{avatar}'")
+                      
+                  template_name = tmpl_info["name"]
+                  required_params = tmpl_info.get("params", [])
+                  
+                  # 3. Resolve Params
+                  # Simple logic: map param names to lead fields
+                  # Supported: first_name, event_date, event_time, etc.
+                  param_values = []
+                  for p in required_params:
+                      if p == "first_name":
+                          param_values.append(job["name"].split(" ")[0])
+                      elif p == "event_date":
+                          # Format event_start_at
+                          if job["event_start_at"]:
+                              param_values.append(job["event_start_at"].strftime("%d/%m"))
+                          else:
+                              param_values.append("TBD")
+                      elif p == "event_time":
+                          if job["event_start_at"]:
+                              param_values.append(job["event_start_at"].strftime("%H:%M"))
+                          else:
+                              param_values.append("TBD")
+                      else:
+                          param_values.append("???") # Placeholder
+  
+                  # 4. Send Message
+                  # Pass explicit None for secrets so it uses env vars if not provided
+                  res = ycloud_send_template(
+                       lead_id=str(lead_id),
+                       template_name=template_name,
+                       language=tmpl_info.get("language", "es_MX"),
+                       params=param_values,
+                       pg_resource=pg_resource
+                  )
+                  
+                  if res["ok"]:
+                      status = "sent"
+                      last_error = None
+                  else:
+                      status = "failed" # Will rely on retry logic (attempts < 3)
+                      last_error = res.get("error")
+                      # If specific error (e.g. invalid phone), maybe cancel?
+                      # For now simpler retry logic.
+                      
+                  # 5. Update Job
+                  # If failed, increment attempts. If sent, attempts stays or ignored.
+                  new_attempts = job.get("attempts", 0) + 1
+                  
+                  # If sent, we are done. If failed and attempts >= 3, maybe mark as 'failed_final'?
+                  # The query filters attempts < 3, so it naturally stops picking it up.
+                  # Update status to 'failed' is enough.
+                  
+                  update_q = """
+                      UPDATE ek_jobs 
+                      SET status = %s, 
+                          attempts = %s, 
+                          last_error = %s,
+                          updated_at = NOW()
+                      WHERE job_id = %s
+                  """
+                  
+                  # Re-conn cursor for update? No, same transaction.
+                  conn.cursor().execute(update_q, (status, new_attempts, last_error, job_id))
+                  exec_count += 1
+                  
+              except Exception as e:
+                  logger.error(f"Job {job_id} failed: {e}")
+                  # Mark error in DB
+                  conn.cursor().execute("""
+                      UPDATE ek_jobs 
+                      SET attempts = attempts + 1, 
+                          last_error = %s,
+                          updated_at = NOW()
+                      WHERE job_id = %s
+                  """, (str(e), job_id))
+                  errors += 1
+                  
+          conn.commit()
+              
+      except Exception as e:
+          if conn: conn.rollback()
+          logger.error(f"Cron Error: {e}")
+          return {"ok": False, "error": str(e)}
+      finally:
+          if conn: conn.close()
+  
+      return {"ok": True, "executed": exec_count, "errors": errors}
+  

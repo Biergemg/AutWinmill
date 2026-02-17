@@ -1,0 +1,151 @@
+flow: einstein_kids_ai_agent
+version: 1.0.0
+description: Procesa mensajes con agente AI de Cyn usando clawbot.ai + guardrails
+
+steps:
+  # 1. Recibir mensaje de WhatsApp
+  - name: receive_message
+    type: http_webhook
+    output: message_data
+    
+  # 2. Obtener contexto del lead
+  - name: get_lead_context
+    type: script
+    language: python
+    entry: ../shared/get_lead_context.py
+    args:
+      phone: ${message_data.phone}
+    output: lead_context
+    
+  # 3. Detectar intención y pre-procesar
+  - name: preprocess_message
+    type: script
+    language: python
+    entry: ../shared/preprocess_message.py
+    args:
+      message: ${message_data.text}
+      phone: ${message_data.phone}
+      lead_context: ${lead_context}
+    output: preprocessing_result
+    
+  # 4. Decidir ruta: AI o Humano
+  - name: decide_route
+    type: switch
+    condition: ${preprocessing_result.route}
+    cases:
+      - value: "ai"
+        steps:
+          # 4.1 Procesar con AI
+          - name: process_with_ai
+            type: script
+            language: python
+            entry: ../shared/clawbot_integration.py
+            args:
+              phone: ${message_data.phone}
+              message: ${message_data.text}
+              lead_context: ${lead_context}
+            output: ai_response
+            
+          # 4.2 Verificar si necesita escalación
+          - name: check_escalation
+            type: script
+            language: python
+            entry: ../shared/check_escalation.py
+            args:
+              response: ${ai_response}
+              lead_context: ${lead_context}
+            output: escalation_check
+            
+          # 4.3 Enviar respuesta o escalar
+          - name: send_response_or_escalate
+            type: switch
+            condition: ${escalation_check.needs_escalation}
+            cases:
+              - value: false
+                steps:
+                  - name: send_ai_response
+                    type: script
+                    language: python
+                    entry: ../shared/send_ai_response.py
+                    args:
+                      phone: ${message_data.phone}
+                      response: ${ai_response}
+                      lead_context: ${lead_context}
+                    output: sent_response
+                    
+              - value: true
+                steps:
+                  - name: escalate_to_cyn
+                    type: script
+                    language: python
+                    entry: ../shared/escalate_to_cyn.py
+                    args:
+                      phone: ${message_data.phone}
+                      message: ${message_data.text}
+                      ai_response: ${ai_response}
+                      escalation_reason: ${escalation_check.reason}
+                      lead_context: ${lead_context}
+                    output: escalation_result
+                    
+      - value: "human"
+        steps:
+          # 4.4 Escalar directamente a humano
+          - name: escalate_directly
+            type: script
+            language: python
+            entry: ../shared/escalate_directly.py
+            args:
+              phone: ${message_data.phone}
+              message: ${message_data.text}
+              reason: ${preprocessing_result.escalation_reason}
+              lead_context: ${lead_context}
+            output: direct_escalation
+            
+  # 5. Registrar interacción
+  - name: log_interaction
+    type: script
+    language: python
+    entry: ../shared/log_ai_interaction.py
+    args:
+      phone: ${message_data.phone}
+      message: ${message_data.text}
+      response: ${ai_response or escalation_result}
+      route: ${preprocessing_result.route}
+      lead_context: ${lead_context}
+    output: log_result
+    
+  # 6. Actualizar score del lead
+  - name: update_lead_score
+    type: script
+    language: python
+    entry: ../shared/update_lead_score.py
+    args:
+      phone: ${message_data.phone}
+      interaction_type: ${preprocessing_result.interaction_type}
+      ai_response: ${ai_response}
+      lead_context: ${lead_context}
+    output: score_update
+    
+  # 7. Trigger acciones adicionales si es necesario
+  - name: trigger_follow_up_actions
+    type: script
+    language: python
+    entry: ../shared/trigger_follow_up.py
+    args:
+      phone: ${message_data.phone}
+      ai_response: ${ai_response}
+      escalation_result: ${escalation_result or direct_escalation}
+      lead_context: ${lead_context}
+    output: follow_up_result
+    condition: ${ai_response or escalation_result or direct_escalation}
+
+failure_handlers:
+  - name: handle_ai_error
+    type: script
+    language: python
+    entry: ../shared/handle_ai_error.py
+    args:
+      phone: ${message_data.phone}
+      error: ${error}
+      lead_context: ${lead_context}
+    output: error_handling_result

@@ -1,0 +1,34 @@
+"""
+Windmill script: M21_attendee_closing.py (Moms)
+Triggered if attendance_minutes > 90% (Hot Lead).
+Strategy: Direct Offer / Closing.
+"""
+from __future__ import annotations
+import logging
+from ..shared.ycloud_send_template import main as send_template
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def main(
+    lead_id: str,
+    pg_resource: dict = None
+) -> dict:
+    
+    # 1. Send "Hot Lead" Offer
+    # Template: EK_MOMS_HOT_LEAD_OFFER
+    # Content idea: "Hola [Name], vi que te quedaste hasta el final. Tengo una oferta especial solo por 24h..."
+    
+    res_msg = send_template(
+        lead_id=lead_id,
+        template_name="EK_MOMS_HOT_LEAD_OFFER", 
+        pg_resource=pg_resource
+    )
+    
+    # 2. Optional: Notify Internal Team (Cyn) if really hot?
+    # For now, just send message to user.
+    
+    return {
+        "ok": res_msg["ok"],
+        "action": "sent_closing_offer"
+    }

@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Einstein Kids - Dashboard Cyn</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .subtitle {
+            color: #666;
+            font-size: 1.2em;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-card .title {
+            font-size: 1.1em;
+            color: #666;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .metric-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .metric-card .subtitle {
+            font-size: 0.9em;
+            color: #999;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .status-hot {
+            background: #ffeaa7;
+            color: #d63031;
+        }
+        
+        .status-new {
+            background: #74b9ff;
+            color: white;
+        }
+        
+        .status-customer {
+            background: #00b894;
+            color: white;
+        }
+        
+        .status-claimed {
+            background: #fdcb6e;
+            color: #e17055;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background: #00b894;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #00a085;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background: #d63031;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #667eea;
+        }
+        
+        .error {
+            background: #ffe6e6;
+            color: #d63031;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .success {
+            background: #e6ffe6;
+            color: #00b894;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin: 20px 0;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-style: italic;
+        }
+        
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            z-index: 1000;
+        }
+        
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .metric-card .value {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧠 Einstein Kids</h1>
+            <p class="subtitle">Dashboard de Control - Cyn</p>
+            <div class="refresh-indicator" id="refreshIndicator">
+                Última actualización: <span id="lastUpdate">--</span>
+            </div>
+        </div>
+
+        <!-- Métricas Principales -->
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="title">Total Leads</div>
+                <div class="value" id="totalLeads">--</div>
+                <div class="subtitle">Hoy: <span id="leadsToday">--</span></div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="title">Ventas Confirmadas</div>
+                <div class="value" id="totalSales">--</div>
+                <div class="subtitle">$<span id="totalRevenue">--</span> MXN</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="title">Tasa de Conversión</div>
+                <div class="value" id="conversionRate">--</div>
+                <div class="subtitle">Leads → Ventas</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="title">Próximo Evento</div>
+                <div class="value" id="nextEvent">--</div>
+                <div class="subtitle"><span id="eventAttendees">--</span> inscritos</div>
+            </div>
+        </div>
+
+        <!-- Leads Calientes -->
+        <div class="section">
+            <h2>🔥 Leads Calientes (Score ≥ 70)</h2>
+            <div id="hotLeadsSection">
+                <div class="loading">Cargando leads calientes...</div>
+            </div>
+        </div>
+
+        <!-- Claims Pendientes -->
+        <div class="section">
+            <h2>💰 Claims de Pago Pendientes</h2>
+            <div id="pendingClaimsSection">
+                <div class="loading">Cargando claims pendientes...</div>
+            </div>
+        </div>
+
+        <!-- Conversión por Avatar -->
+        <div class="section">
+            <h2>📊 Conversión por Tipo</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="title">Mamás</div>
+                    <div class="value" id="momsConversion">--</div>
+                    <div class="subtitle"><span id="momsLeads">--</span> leads → <span id="momsSales">--</span> ventas</div>
+                </div>
+                <div class="metric-card">
+                    <div class="title">Terapeutas</div>
+                    <div class="value" id="therapistsConversion">--</div>
+                    <div class="subtitle"><span id="therapistsLeads">--</span> leads → <span id="therapistsSales">--</span> ventas</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Eventos Recientes -->
+        <div class="section">
+            <h2>📅 Eventos Recientes</h2>
+            <div id="recentEventsSection">
+                <div class="loading">Cargando eventos...</div>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="section">
+            <h2>⚡ Acciones Rápidas</h2>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="refreshDashboard()">🔄 Actualizar Dashboard</button>
+                <button class="btn btn-success" onclick="generateDailyReport()">📈 Generar Reporte Diario</button>
+                <button class="btn btn-primary" onclick="exportData()">📤 Exportar Datos</button>
+                <button class="btn btn-danger" onclick="sendBroadcast()">📢 Enviar Broadcast</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funciones del Dashboard
+        let dashboardData = {};
+
+        async function loadDashboard() {
+            try {
+                showLoading();
+                
+                // Llamar al script de dashboard
+                const response = await fetch('/api/scripts/einstein_kids/dashboard_cyn/run', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Error al cargar dashboard');
+                }
+                
+                const data = await response.json();
+                dashboardData = data;
+                
+                updateMetrics(data);
+                updateHotLeads(data.hot_leads);
+                updatePendingClaims(data.claims_pendientes);
+                updateConversionByAvatar(data.conversion_por_avatar);
+                updateRecentEvents(data.eventos_proximos);
+                
+                updateLastUpdate();
+                hideLoading();
+                
+            } catch (error) {
+                showError('Error al cargar dashboard: ' + error.message);
+            }
+        }
+
+        function updateMetrics(data) {
+            // Métricas principales
+            document.getElementById('totalLeads').textContent = data.resumen_general?.total_leads || '0';
+            document.getElementById('leadsToday').textContent = data.daily_report?.leads?.nuevos || '0';
+            
+            document.getElementById('totalSales').textContent = data.resumen_general?.ventas_confirmadas || '0';
+            document.getElementById('totalRevenue').textContent = (data.resumen_general?.monto_total || 0).toLocaleString();
+            
+            document.getElementById('conversionRate').textContent = (data.resumen_general?.conversion_rate || 0) + '%';
+            
+            // Próximo evento
+            if (data.proximo_evento) {
+                document.getElementById('nextEvent').textContent = data.proximo_evento.fecha;
+                document.getElementById('eventAttendees').textContent = data.proximo_evento.inscritos;
+            }
+        }
+
+        function updateHotLeads(hotLeads) {
+            const section = document.getElementById('hotLeadsSection');
+            
+            if (!hotLeads || hotLeads.length === 0) {
+                section.innerHTML = '<p>No hay leads calientes en este momento.</p>';
+                return;
+            }
+            
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Score</th>
+                                <th>Etapa</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            hotLeads.forEach(lead => {
+                html += `
+                    <tr>
+                        <td>${lead.nombre}</td>
+                        <td>${lead.telefono}</td>
+                        <td>${lead.email}</td>
+                        <td><strong>${lead.score}</strong></td>
+                        <td><span class="status-badge status-hot">${lead.stage}</span></td>
+                        <td>
+                            <button class="btn btn-primary" onclick="contactLead('${lead.id}', '${lead.telefono}')">Contactar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            section.innerHTML = html;
+        }
+
+        function updatePendingClaims(claims) {
+            const section = document.getElementById('pendingClaimsSection');
+            
+            if (!claims || claims.length === 0) {
+                section.innerHTML = '<p>No hay claims pendientes.</p>';
+                return;
+            }
+            
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Teléfono</th>
+                                <th>Fecha Claim</th>
+                                <th>Prueba</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            claims.forEach(claim => {
+                html += `
+                    <tr>
+                        <td>${claim.nombre}</td>
+                        <td>${claim.telefono}</td>
+                        <td>${claim.fecha_claim}</td>
+                        <td>${claim.proof ? 'Ver prueba' : 'Sin prueba'}</td>
+                        <td>
+                            <button class="btn btn-success" onclick="confirmClaim('${claim.claim_id}')">Confirmar</button>
+                            <button class="btn btn-danger" onclick="rejectClaim('${claim.claim_id}')">Rechazar</button>
+                        </td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            section.innerHTML = html;
+        }
+
+        function updateConversionByAvatar(conversionData) {
+            if (!conversionData || !conversionData.conversion_por_avatar) return;
+            
+            conversionData.conversion_por_avatar.forEach(item => {
+                if (item.avatar === 'mother') {
+                    document.getElementById('momsConversion').textContent = item.conversion_rate + '%';
+                    document.getElementById('momsLeads').textContent = item.leads;
+                    document.getElementById('momsSales').textContent = item.ventas;
+                } else if (item.avatar === 'therapist') {
+                    document.getElementById('therapistsConversion').textContent = item.conversion_rate + '%';
+                    document.getElementById('therapistsLeads').textContent = item.leads;
+                    document.getElementById('therapistsSales').textContent = item.ventas;
+                }
+            });
+        }
+
+        function updateRecentEvents(events) {
+            const section = document.getElementById('recentEventsSection');
+            
+            if (!events || events.length === 0) {
+                section.innerHTML = '<p>No hay eventos próximos.</p>';
+                return;
+            }
+            
+            let html = `
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Inscritos</th>
+                                <th>Asistieron</th>
+                                <th>No Show</th>
+                                <th>Tasa Asistencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            events.forEach(event => {
+                html += `
+                    <tr>
+                        <td>${event.fecha}</td>
+                        <td>${event.inscritos}</td>
+                        <td>${event.asistieron}</td>
+                        <td>${event.no_show}</td>
+                        <td><strong>${event.tasa_asistencia}%</strong></td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table></div>';
+            section.innerHTML = html;
+        }
+
+        function contactLead(leadId, phone) {
+            if (confirm(`¿Abrir WhatsApp para contactar al lead ${phone}?`)) {
+                window.open(`https://wa.me/${phone.replace(/\D/g, '')}`, '_blank');
+            }
+        }
+
+        async function confirmClaim(claimId) {
+            if (confirm('¿Confirmar este pago?')) {
+                try {
+                    const response = await fetch('/api/scripts/einstein_kids/payment_claim_decide/run', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            claim_id: claimId,
+                            action: 'CONFIRMAR'
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Pago confirmado exitosamente');
+                        loadDashboard();
+                    } else {
+                        alert('Error al confirmar pago');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+        }
+
+        async function rejectClaim(claimId) {
+            if (confirm('¿Rechazar este pago?')) {
+                try {
+                    const response = await fetch('/api/scripts/einstein_kids/payment_claim_decide/run', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            claim_id: claimId,
+                            action: 'RECHAZAR'
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Pago rechazado');
+                        loadDashboard();
+                    } else {
+                        alert('Error al rechazar pago');
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            }
+        }
+
+        function refreshDashboard() {
+            loadDashboard();
+        }
+
+        function generateDailyReport() {
+            alert('Generando reporte diario... (Esta función se implementará)');
+        }
+
+        function exportData() {
+            alert('Exportando datos... (Esta función se implementará)');
+        }
+
+        function sendBroadcast() {
+            alert('Enviando broadcast... (Esta función se implementará)');
+        }
+
+        function showLoading() {
+            document.querySelectorAll('.loading').forEach(el => {
+                el.style.display = 'block';
+            });
+        }
+
+        function hideLoading() {
+            document.querySelectorAll('.loading').forEach(el => {
+                el.style.display = 'none';
+            });
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.dashboard').insertBefore(errorDiv, document.querySelector('.metrics-grid'));
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        function updateLastUpdate() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString('es-MX');
+        }
+
+        // Auto-refresh cada 30 segundos
+        setInterval(loadDashboard, 30000);
+
+        // Cargar dashboard al iniciar
+        document.addEventListener('DOMContentLoaded', loadDashboard);
+    </script>
+</body>
+</html>

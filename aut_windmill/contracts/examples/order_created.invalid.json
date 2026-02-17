@@ -1,0 +1,11 @@
+{
+  "event_name": "order_created",
+  "version": "1.0.0",
+  "event_id": "evt_456",
+  "trace_id": "trace_def",
+  "occurred_at": "2026-01-27T12:05:00Z",
+  "customer_id": "cust_002",
+  "total_amount": -10,
+  "currency": "USD",
+  "items": []
+}

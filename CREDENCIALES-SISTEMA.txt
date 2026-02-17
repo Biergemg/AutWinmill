@@ -1,0 +1,35 @@
+PLANTILLA DE ACCESOS DEL SISTEMA
+================================
+
+Este archivo no debe contener credenciales reales.
+Completa los datos en un archivo local fuera de Git, por ejemplo:
+CREDENCIALES-SISTEMA.local.txt
+
+DASHBOARD DE CONTROL
+  URL: http://localhost:8501
+  USUARIO: <definir>
+  PASSWORD: <definir>
+
+SISTEMA BASE WINDMILL
+  URL: http://localhost:8000
+  USUARIO: <definir>
+  PASSWORD: <definir>
+
+SISTEMA CLIENTE
+  URL: http://localhost:8001
+  USUARIO: <definir>
+  PASSWORD: <definir>
+
+BASES DE DATOS
+  PG_BASE_HOST: localhost
+  PG_BASE_PORT: 5432
+  PG_BASE_USER: <definir>
+  PG_BASE_PASSWORD: <definir>
+  PG_CLIENT_HOST: localhost
+  PG_CLIENT_PORT: 5433
+  PG_CLIENT_USER: <definir>
+  PG_CLIENT_PASSWORD: <definir>
+
+Notas:
+1) Rotar inmediatamente cualquier credencial historica usada en el proyecto.
+2) No publicar usuarios/passwords en docs, scripts ni commits.

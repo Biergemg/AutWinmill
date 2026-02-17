@@ -1,0 +1,115 @@
+flow: einstein_kids_zoom_webhook
+version: 1.0.0
+description: Procesa webhooks de Zoom para tracking de asistencia a webinars
+
+steps:
+  # 1. Recibir webhook de Zoom
+  - name: receive_zoom_webhook
+    type: http_webhook
+    output: webhook_data
+    
+  # 2. Validar firma del webhook
+  - name: validate_zoom_signature
+    type: script
+    language: python
+    entry: ../shared/validate_zoom_webhook.py
+    args:
+      - ${webhook_data}
+    output: validation_result
+    on_failure: send_to_dlq
+    
+  # 3. Procesar según tipo de evento
+  - name: process_event_type
+    type: switch
+    condition: ${validation_result.event_type}
+    cases:
+      - value: "meeting.participant_joined"
+        steps:
+          - name: handle_participant_joined
+            type: script
+            language: python
+            entry: ../shared/zoom_participant_joined.py
+            args:
+              - ${validation_result}
+            output: joined_result
+            
+      - value: "meeting.participant_left"
+        steps:
+          - name: handle_participant_left
+            type: script
+            language: python
+            entry: ../shared/zoom_participant_left.py
+            args:
+              - ${validation_result}
+            output: left_result
+            
+      - value: "meeting.ended"
+        steps:
+          - name: handle_meeting_ended
+            type: script
+            language: python
+            entry: ../shared/zoom_meeting_ended.py
+            args:
+              - ${validation_result}
+            output: ended_result
+            
+      - default: true
+        steps:
+          - name: log_unsupported_event
+            type: sql
+            entry: scripts/core/insert_audit.sql
+            args:
+              actor: "zoom_webhook"
+              action: "unsupported_event_type"
+              target_type: "webhook"
+              target_id: ${validation_result.event_type}
+              metadata: ${validation_result}
+    
+  # 4. Computar asistencia final (si es meeting ended)
+  - name: compute_final_attendance
+    type: script
+    language: python
+    entry: ../shared/compute_attendance.py
+    args:
+      meeting_id: ${validation_result.meeting_id}
+      event_start_at: ${validation_result.event_start_at}
+    condition: ${validation_result.event_type == "meeting.ended"}
+    output: attendance_result
+    
+  # 5. Actualizar estados de leads
+  - name: update_lead_statuses
+    type: script
+    language: python
+    entry: ../shared/update_lead_stages.py
+    args:
+      meeting_id: ${validation_result.meeting_id}
+      attendance_data: ${attendance_result}
+    condition: ${validation_result.event_type == "meeting.ended"}
+    
+  # 6. Generar reporte de asistencia
+  - name: generate_attendance_report
+    type: script
+    language: python
+    entry: ../shared/generate_attendance_report.py
+    args:
+      meeting_id: ${validation_result.meeting_id}
+      event_start_at: ${validation_result.event_start_at}
+    condition: ${validation_result.event_type == "meeting.ended"}
+    output: report_data
+    
+  # 7. Notificar a Cyn (si hay cambios importantes)
+  - name: notify_cyn_attendance
+    type: script
+    language: python
+    entry: ../shared/notify_cyn.py
+    args:
+      type: "attendance_report"
+      meeting_id: ${validation_result.meeting_id}
+      report_data: ${report_data}
+    condition: ${validation_result.event_type == "meeting.ended"}
+
+failure_handlers:
+  - name: send_to_dlq
+    type: script
+    language: python
+    entry: scripts/core/requeue_event.py

@@ -1,0 +1,41 @@
+summary: "Einstein Kids - Payment Claim Create"
+description: "Create payment claim record."
+language: python3
+content: |
+  from __future__ import annotations
+  import psycopg2
+  from psycopg2.extras import Json, RealDictCursor
+
+  def main(lead_id: str, proof: dict | None = None, pg_resource: dict | None = None) -> dict:
+      if not lead_id:
+          return {"ok": False, "error": "missing_lead_id"}
+      if not pg_resource:
+          return {"ok": False, "error": "missing_pg_resource"}
+      conn = psycopg2.connect(**pg_resource)
+      try:
+          with conn.cursor(cursor_factory=RealDictCursor) as cur:
+              cur.execute("SELECT 1 FROM ek_leads WHERE lead_id=%s", (lead_id,))
+              if not cur.fetchone():
+                  return {"ok": False, "error": "lead_not_found"}
+              cur.execute(
+                  """
+                  INSERT INTO ek_sales (lead_id, provider, status, amount, currency, external_ref, proof)
+                  VALUES (%s, 'vitalhealth', 'claimed', %s, %s, %s, %s::jsonb)
+                  RETURNING sale_id
+                  """,
+                  (
+                      lead_id,
+                      (proof or {}).get("amount"),
+                      (proof or {}).get("currency", "MXN"),
+                      (proof or {}).get("external_ref"),
+                      Json(proof or {}),
+                  ),
+              )
+              sale_id = str(cur.fetchone()["sale_id"])
+          conn.commit()
+          return {"ok": True, "lead_id": lead_id, "sale_id": sale_id, "status": "claimed"}
+      except Exception as e:
+          conn.rollback()
+          return {"ok": False, "error": str(e)}
+      finally:
+          conn.close()

@@ -1,0 +1,15 @@
+{
+  "event_name": "order_created",
+  "version": "1.0.0",
+  "event_id": "evt_123",
+  "trace_id": "trace_abc",
+  "occurred_at": "2026-01-27T12:00:00Z",
+  "customer_id": "cust_001",
+  "total_amount": 149.99,
+  "currency": "USD",
+  "items": [
+    { "sku": "SKU-001", "quantity": 2, "price": 49.99 },
+    { "sku": "SKU-002", "quantity": 1, "price": 50.01 }
+  ],
+  "metadata": { "channel": "web", "promo": "NEWYEAR26" }
+}

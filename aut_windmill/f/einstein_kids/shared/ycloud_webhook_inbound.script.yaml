@@ -1,0 +1,12 @@
+summary: "Einstein Kids - YCloud Inbound Webhook"
+description: "Handles incoming WhatsApp messages from YCloud, validating signatures and extracting lead info."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    payload:
+      type: object
+      description: "Webhook raw payload"
+  required:
+    - payload
+language: python3

@@ -1,0 +1,94 @@
+flow: mvp_ingesta_validacion_orquestacion
+version: 1.0.0
+description: Flujo MVP que recibe un evento, valida y orquesta pasos.
+steps:
+  - name: receive_payload
+    type: http_webhook
+    output: payload
+  - name: manual_trigger
+    type: manual
+    output: payload
+  - name: rate_limit_check
+    type: sql
+    entry: scripts/core/rate_limit_check.sql
+    args:
+      source: ${payload.metadata.source}
+    on_failure: send_to_dlq_ratelimit
+  - name: validate_contract
+    type: script
+    language: python
+    entry: scripts/core/validate_event_wm.py
+    args:
+      - ${payload}
+    on_failure: send_to_dlq
+  - name: record_rate_hit
+    type: sql
+    entry: scripts/core/record_rate_hit.sql
+    args:
+      source: ${payload.metadata.source}
+      trace_id: ${step('validate_contract').output.trace_id}
+    condition: step('rate_limit_check').succeeded
+  - name: metric_validated
+    type: sql
+    entry: scripts/core/insert_metric.sql
+    args:
+      metric_name: "events_validated"
+      value: 1
+      labels: "{\"event_name\":\"${payload.event_name}\"}"
+    condition: step('validate_contract').succeeded
+  - name: audit_validated
+    type: sql
+    entry: scripts/core/insert_audit.sql
+    args:
+      actor: "system"
+      action: "validated"
+      trace_id: ${step('validate_contract').output.trace_id}
+      workflow_id: "mvp_ingesta_validacion_orquestacion"
+      event_id: ${payload.event_id}
+      details: "{}"
+    condition: step('validate_contract').succeeded
+  - name: persist_validated
+    type: sql
+    entry: scripts/core/persist_state.sql
+    args:
+      event_id: ${payload.event_id}
+      trace_id: ${step('validate_contract').output.trace_id}
+      payload_json: ${payload}
+      workflow_id: "mvp_ingesta_validacion_orquestacion"
+    condition: step('validate_contract').succeeded
+  - name: orchestrate
+    type: task
+    description: Paso ficticio que representaría acciones de negocio (e.g., reservar stock).
+    retry:
+      attempts: 3
+      backoff: exponential
+      max_delay_seconds: 60
+  - name: audit
+    type: log
+    message: Flujo completado para ${payload.event_id}
+  - name: send_to_dlq
+    type: sql
+    entry: scripts/core/insert_dlq.sql
+    args:
+      reason: ${step('validate_contract').output.errors}
+      payload_json: ${payload}
+      trace_id: ${step('validate_contract').output.trace_id}
+      event_id: ${payload.event_id}
+    condition: step('validate_contract').failed
+  - name: metric_dlq
+    type: sql
+    entry: scripts/core/insert_metric.sql
+    args:
+      metric_name: "events_dlq"
+      value: 1
+      labels: "{\"event_name\":\"${payload.event_name}\"}"
+    condition: step('validate_contract').failed
+  - name: send_to_dlq_ratelimit
+    type: sql
+    entry: scripts/core/insert_dlq.sql
+    args:
+      reason: "rate_limited"
+      payload_json: ${payload}
+      trace_id: ${step('validate_contract').output.trace_id}
+      event_id: ${payload.event_id}
+    condition: step('rate_limit_check').failed

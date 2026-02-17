@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/order_created.schema.json",
+  "title": "order_created",
+  "type": "object",
+  "required": [
+    "event_name",
+    "version",
+    "event_id",
+    "trace_id",
+    "occurred_at",
+    "customer_id",
+    "total_amount",
+    "currency",
+    "items"
+  ],
+  "properties": {
+    "event_name": { "type": "string", "const": "order_created" },
+    "version": { "type": "string" },
+    "event_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "occurred_at": { "type": "string" },
+    "customer_id": { "type": "string" },
+    "total_amount": { "type": "number", "minimum": 0 },
+    "currency": { "type": "string" },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["sku", "quantity", "price"],
+        "properties": {
+          "sku": { "type": "string" },
+          "quantity": { "type": "integer", "minimum": 1 },
+          "price": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,3 @@
+workspace: ""
+# Set lock to true if you want to prevent edits from UI
+lock: false

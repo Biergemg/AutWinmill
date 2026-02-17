@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://einstein-kids.com/schemas/lead_optin.json",
+  "title": "Lead Opt-in Event",
+  "description": "Schema for lead opt-in from landing pages",
+  "type": "object",
+  "required": ["name", "phone", "email", "avatar_hint", "event_start_at", "consent"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 255
+    },
+    "phone": {
+      "type": "string",
+      "pattern": "^[0-9\\+\\s\\-\\(\\)]+$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "avatar_hint": {
+      "type": "string",
+      "enum": ["mother", "therapist"]
+    },
+    "event_start_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "utm_source": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "utm_campaign": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "utm_content": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "utm_medium": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "landing_id": {
+      "type": ["string", "null"],
+      "maxLength": 100
+    },
+    "consent": {
+      "type": "object",
+      "required": ["whatsapp", "email"],
+      "properties": {
+        "whatsapp": {
+          "type": "boolean",
+          "const": true
+        },
+        "email": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

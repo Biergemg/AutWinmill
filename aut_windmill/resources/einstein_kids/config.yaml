@@ -1,0 +1,54 @@
+# Einstein Kids - Configuration
+# Variables de entorno para el proyecto de Cyn
+
+# YCloud API Configuration
+YCLOUD_API_KEY: "your_ycloud_api_key_here"
+YCLOUD_WEBHOOK_SECRET: "your_webhook_secret_here"
+YCLOUD_SENDER: "+1234567890"  # Número de WhatsApp Business
+YCLOUD_BASE_URL: "https://api.ycloud.com"
+
+# Rate Limits (por lead)
+WHATSAPP_PER_LEAD_HOUR: 10
+WHATSAPP_PER_LEAD_DAY: 50
+
+# Scoring Configuration
+HOT_THRESHOLD: 70
+HUMAN_THRESHOLD: 90
+
+# Templates (nombres en YCloud)
+TEMPLATES:
+  welcome_moms: "ek_welcome_moms"
+  welcome_therapists: "ek_welcome_therapists"
+  reminder_24h: "ek_reminder_24h"
+  reminder_1h: "ek_reminder_1h"
+  reminder_10m: "ek_reminder_10m"
+  post_event: "ek_post_event"
+  no_show: "ek_no_show"
+  closing: "ek_closing"
+  payment_instructions: "ek_payment_instructions"
+  onboarding: "ek_onboarding"
+
+# Event Configuration
+DEFAULT_EVENT_DURATION_MINUTES: 90
+ATTENDANCE_THRESHOLD_MINUTES: 45
+
+# Payment Configuration
+PAYMENT_PROVIDER: "vitalhealth"
+DEFAULT_CURRENCY: "MXN"
+
+# Group Configuration
+DEFAULT_GROUP_CAPACITY: 256
+MAX_GROUPS_PER_COHORT: 5
+
+# Job Configuration
+JOB_RETRY_ATTEMPTS: 3
+JOB_RETRY_DELAY_MINUTES: 15
+
+# URLs
+ZOOM_WEBHOOK_URL: "https://your-domain.com/webhook/zoom"
+CALENDLY_WEBHOOK_URL: "https://your-domain.com/webhook/calendly"
+LANDING_BASE_URL: "https://einstein-kids.com"
+
+# Compliance
+COMPLIANCE_EMAIL: "compliance@einstein-kids.com"
+UNSUBSCRIBE_KEYWORD: "BAJA"

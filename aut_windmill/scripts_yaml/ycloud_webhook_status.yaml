@@ -1,0 +1,46 @@
+summary: "Einstein Kids - YCloud Webhook Status"
+description: "Update message status from YCloud webhook."
+language: python3
+content: |
+  from __future__ import annotations
+  import psycopg2
+
+  STATUS_TO_COL = {
+      "accepted": None,
+      "sent": "sent_at",
+      "delivered": "delivered_at",
+      "read": "read_at",
+      "failed": None,
+  }
+
+  def main(payload: dict, pg_resource: dict | None = None) -> dict:
+      if not pg_resource:
+          return {"ok": False, "error": "missing_pg_resource"}
+      message_id = payload.get("message_id") or payload.get("id")
+      status = (payload.get("status") or "").lower().strip()
+      if not message_id or status not in STATUS_TO_COL:
+          return {"ok": False, "error": "missing_or_invalid_fields"}
+
+      conn = psycopg2.connect(**pg_resource)
+      try:
+          with conn.cursor() as cur:
+              if STATUS_TO_COL[status]:
+                  col = STATUS_TO_COL[status]
+                  cur.execute(
+                      f"UPDATE ek_ycloud_messages SET status=%s, {col}=NOW() WHERE ycloud_message_id=%s",
+                      (status, message_id),
+                  )
+              else:
+                  cur.execute(
+                      "UPDATE ek_ycloud_messages SET status=%s WHERE ycloud_message_id=%s",
+                      (status, message_id),
+                  )
+              if cur.rowcount == 0:
+                  return {"ok": False, "error": "message_not_found", "message_id": message_id}
+          conn.commit()
+          return {"ok": True, "message_id": message_id, "status": status}
+      except Exception as e:
+          conn.rollback()
+          return {"ok": False, "error": str(e)}
+      finally:
+          conn.close()

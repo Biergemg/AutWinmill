@@ -1,0 +1,30 @@
+"""
+Windmill script: T21_attendee_closing.py (Therapists)
+Triggered if attendance_minutes > 90%
+Strategy: Partner Application Invitation.
+"""
+from __future__ import annotations
+import logging
+from ..shared.ycloud_send_template import main as send_template
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def main(
+    lead_id: str,
+    pg_resource: dict = None
+) -> dict:
+    
+    # 1. Send "Partner Application" Invite
+    # Template: EK_THERAPISTS_PARTNER_INVITE
+    
+    res_msg = send_template(
+        lead_id=lead_id,
+        template_name="EK_THERAPISTS_PARTNER_INVITE", 
+        pg_resource=pg_resource
+    )
+    
+    return {
+        "ok": res_msg["ok"],
+        "action": "sent_partner_invite"
+    }

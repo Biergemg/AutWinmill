@@ -1,0 +1,15 @@
+summary: "Einstein Kids - Payment Claim Decide"
+description: "Approves or rejects a payment claim based on manual review."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    claim_id:
+      type: string
+    decision:
+      type: string
+      enum: ["approve", "reject"]
+  required:
+    - claim_id
+    - decision
+language: python3

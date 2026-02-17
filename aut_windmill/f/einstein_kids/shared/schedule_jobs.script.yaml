@@ -1,0 +1,14 @@
+summary: "Einstein Kids - Schedule Jobs"
+description: "Schedules the full sequence of automated messages for a lead based on event date."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+    event_start_at:
+      type: string
+  required:
+    - lead_id
+    - event_start_at
+language: python3

@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://einstein-kids.com/schemas/payment_claim.json",
+  "title": "Payment Claim Event",
+  "description": "Schema for payment claims from WhatsApp messages",
+  "type": "object",
+  "required": ["lead_id", "claim_text", "timestamp"],
+  "properties": {
+    "lead_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "claim_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proof": {
+      "type": ["object", "null"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["screenshot", "reference", "email"]
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    }
+  }
+}

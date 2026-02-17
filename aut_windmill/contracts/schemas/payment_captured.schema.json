@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/payment_captured.schema.json",
+  "title": "payment_captured",
+  "type": "object",
+  "required": [
+    "event_name",
+    "version",
+    "event_id",
+    "trace_id",
+    "occurred_at",
+    "payment_id",
+    "order_id",
+    "amount",
+    "currency",
+    "method",
+    "status"
+  ],
+  "properties": {
+    "event_name": { "type": "string", "const": "payment_captured" },
+    "version": { "type": "string" },
+    "event_id": { "type": "string" },
+    "trace_id": { "type": "string" },
+    "occurred_at": { "type": "string" },
+    "payment_id": { "type": "string" },
+    "order_id": { "type": "string" },
+    "amount": { "type": "number", "minimum": 0 },
+    "currency": { "type": "string" },
+    "method": { "type": "string" },
+    "status": { "type": "string", "enum": ["captured", "authorized", "failed", "refunded"] },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

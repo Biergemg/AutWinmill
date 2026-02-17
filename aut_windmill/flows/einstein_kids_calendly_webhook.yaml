@@ -1,0 +1,123 @@
+flow: einstein_kids_calendly_webhook
+version: 1.0.0
+description: Procesa webhooks de Calendly para booking de masterclass
+
+steps:
+  # 1. Recibir webhook de Calendly
+  - name: receive_calendly_webhook
+    type: http_webhook
+    output: webhook_data
+    
+  # 2. Validar firma del webhook
+  - name: validate_calendly_signature
+    type: script
+    language: python
+    entry: ../shared/validate_calendly_webhook.py
+    args:
+      - ${webhook_data}
+    output: validation_result
+    on_failure: send_to_dlq
+    
+  # 3. Procesar según tipo de evento
+  - name: process_event_type
+    type: switch
+    condition: ${validation_result.event}
+    cases:
+      - value: "invitee.created"
+        steps:
+          - name: handle_booking_created
+            type: script
+            language: python
+            entry: ../shared/calendly_integration.py
+            args:
+              webhook_type: "booking_created"
+              webhook_data: ${validation_result.payload}
+            output: booking_result
+            
+      - value: "invitee.cancelled"
+        steps:
+          - name: handle_booking_cancelled
+            type: script
+            language: python
+            entry: ../shared/calendly_integration.py
+            args:
+              webhook_type: "booking_cancelled"
+              webhook_data: ${validation_result.payload}
+            output: cancellation_result
+            
+      - value: "invitee.no_show"
+        steps:
+          - name: handle_no_show
+            type: script
+            language: python
+            entry: ../shared/calendly_no_show.py
+            args:
+              webhook_data: ${validation_result.payload}
+            output: no_show_result
+            
+      - default: true
+        steps:
+          - name: log_unsupported_event
+            type: sql
+            entry: scripts/core/insert_audit.sql
+            args:
+              actor: "calendly_webhook"
+              action: "unsupported_event_type"
+              target_type: "webhook"
+              target_id: ${validation_result.event}
+              metadata: ${validation_result}
+    
+  # 4. Trigger secuencia de confirmación (si es booking creado)
+  - name: trigger_confirmation_sequence
+    type: script
+    language: python
+    entry: ../shared/trigger_confirmation_sequence.py
+    args:
+      lead_id: ${booking_result.lead_id}
+      event_type: ${booking_result.funnel}
+    condition: ${validation_result.event == "invitee.created"}
+    
+  # 5. Programar recordatorios (si es booking creado)
+  - name: schedule_event_reminders
+    type: script
+    language: python
+    entry: ../shared/schedule_event_reminders.py
+    args:
+      lead_id: ${booking_result.lead_id}
+      event_start_at: ${booking_result.event_start_at}
+    condition: ${validation_result.event == "invitee.created"}
+    
+  # 6. Cancelar jobs programados (si es cancelación)
+  - name: cancel_scheduled_jobs
+    type: script
+    language: python
+    entry: ../shared/cancel_jobs.py
+    args:
+      lead_id: ${cancellation_result.lead_id}
+    condition: ${validation_result.event == "invitee.cancelled"}
+    
+  # 7. Notificar a Cyn de cambios importantes
+  - name: notify_cyn_booking_changes
+    type: script
+    language: python
+    entry: ../shared/notify_cyn.py
+    args:
+      type: "calendly_booking_change"
+      event_type: ${validation_result.event}
+      data: ${validation_result.payload}
+    
+  # 8. Actualizar dashboard con estadísticas
+  - name: update_dashboard_stats
+    type: script
+    language: python
+    entry: ../shared/update_dashboard_stats.py
+    args:
+      source: "calendly"
+      event_type: ${validation_result.event}
+      stats_data: ${booking_result.booking_stats or cancellation_result.booking_stats}
+
+failure_handlers:
+  - name: send_to_dlq
+    type: script
+    language: python
+    entry: scripts/core/requeue_event.py

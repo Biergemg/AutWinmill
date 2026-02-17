@@ -1,0 +1,220 @@
+# Knowledge Base - Einstein Kids por Cyn
+# Información completa sobre el negocio, productos, y scripts de respuesta
+
+# Información General del Negocio
+business_info:
+  name: "Einstein Kids"
+  tagline: "Desarrollo infantil temprano para niños de 0-3 años"
+  mission: "Ayudar a mamás a maximizar el potencial de sus bebés en los primeros 3 años de vida"
+  
+# Información de Cyn
+instructor:
+  name: "Cynthia Rodriguez"
+  title: "Especialista en Desarrollo Infantil Temprano"
+  experience: "8+ años trabajando con familias y niños"
+  credentials:
+    - "Licenciatura en Psicología del Desarrollo"
+    - "Certificación en Estimulación Temprana"
+    - "Especialización en Neurodesarrollo Infantil"
+  
+# Productos y Servicios
+products:
+  masterclass:
+    name: "Masterclass de Desarrollo Infantil Temprano"
+    duration: "90 minutos"
+    price: "$1,997 MXN"
+    description: "Clase magistral donde aprenderás técnicas comprobadas para estimular el desarrollo de tu bebé"
+    benefits:
+      - "Técnicas de estimulación visual, auditiva y motriz"
+      - "Ejercicios prácticos que puedes hacer en casa"
+      - "Guía paso a paso según la edad de tu bebé"
+      - "Acceso a grupo VIP de WhatsApp"
+      - "Material de apoyo digital"
+    
+  programa_completo:
+    name: "Programa Completo Einstein Kids"
+    duration: "12 semanas"
+    price: "$9,997 MXN"
+    description: "Programa intensivo con Cynthia personalmente"
+    includes:
+      - "12 sesiones semanales en vivo con Cynthia"
+      - "Evaluación inicial personalizada"
+      - "Plan de estimulación personalizado"
+      - "Seguimiento semanal"
+      - "Grupo VIP exclusivo"
+      - "Material didáctico físico"
+      - "Certificado de finalización"
+
+# Objetivos de Desarrollo por Edad
+development_goals:
+  0_3_months:
+    visual: "Seguimiento visual, contraste de colores"
+    auditory: "Respuesta a sonidos, localización auditiva"
+    motor: "Control de cabeza, movimientos básicos"
+    
+  4_6_months:
+    visual: "Visión binocular, seguimiento de objetos"
+    auditory: "Reconocimiento de voces, respuesta a nombre"
+    motor: "Volteo, sentado con apoyo, agarre"
+    
+  7_9_months:
+    visual: "Percepción de profundidad, seguimiento complejo"
+    auditory: "Comprensión de palabras simples"
+    motor: "Gateo, sentado independiente, pinza fina"
+    
+  10_12_months:
+    visual: "Coordinación mano-ojo, exploración visual"
+    auditory: "Primera palabras, instrucciones simples"
+    motor: "Primeros pasos, manipulación de objetos"
+
+# Técnicas de Estimulación
+stimulation_techniques:
+  visuales:
+    - name: "Tarjetas de Contraste"
+      description: "Usar tarjetas blancas y negras para bebés de 0-3 meses"
+      frequency: "3 veces al día, 5 minutos"
+      
+    - name: "Objetos de Colores Brillantes"
+      description: "Móviles, juguetes de colores vivos"
+      frequency: "Durante el juego diario"
+      
+    - name: "Espejo de Seguridad"
+      description: "Permitir que el bebé se observe"
+      frequency: "5-10 minutos diarios"
+      
+  auditivas:
+    - name: "Lectura de Cuentos"
+      description: "Leer con entonación clara y expresiva"
+      frequency: "2 veces al día"
+      
+    - name: "Música Clásica"
+      description: "Mozart, Bach - estimula conexiones neuronales"
+      frequency: "30 minutos diarios"
+      
+    - name: "Conversación Constante"
+      description: "Describir acciones, nombrar objetos"
+      frequency: "Durante todo el día"
+      
+  motoras:
+    - name: "Tummy Time"
+      description: "Tiempo boca abajo para fortalecer cuello"
+      frequency: "Varias veces al día, empezando con 2-3 minutos"
+      
+    - name: "Ejercicios de Cuello"
+      description: "Movimientos suaves de cabeza"
+      frequency: "2-3 veces al día"
+      
+    - name: "Estimulación Táctil"
+      description: "Masajes suaves, texturas diferentes"
+      frequency: "Diario durante el baño o cambio de pañal"
+
+# Respuestas Comunes a Preguntas
+faq_responses:
+  precio:
+    question: "¿Cuánto cuesta?"
+    response: "La masterclass tiene un valor de $1,997 MXN. Es una inversión en el futuro de tu bebé. También tenemos el programa completo de 12 semanas por $9,997 MXN si deseas acompañamiento personalizado conmigo."
+    
+  edad:
+    question: "¿Desde qué edad puedo empezar?"
+    response: "¡Desde el nacimiento! Los primeros 3 años son cruciales. Entre más temprano empieces, mejores resultados verás. Incluso si tu bebé ya tiene 2-3 años, aún hay mucho que podemos hacer."
+    
+  tiempo:
+    question: "¿Cuánto tiempo debo dedicar?"
+    response: "Solo 15-20 minutos al día con las técnicas que te enseño. Es tiempo de calidad con tu bebé, no una carga adicional. Lo puedes integrar en tu rutina diaria."
+    
+  resultados:
+    question: "¿Cuándo veré resultados?"
+    response: "Verás cambios en las primeras 2-3 semanas: mejor atención visual, respuesta más rápida a sonidos, movimientos más coordinados. Cada bebé es diferente, pero la constancia es clave."
+    
+  metodo:
+    question: "¿Qué método usas?"
+    response: "Combino técnicas de estimulación temprana basadas en neurociencia, con ejercicios prácticos que he desarrollado en 8 años de experiencia. Todo es científicamente comprobado y seguro para tu bebé."
+    
+  seguridad:
+    question: "¿Es seguro para mi bebé?"
+    response: "Absolutamente. Todas las técnicas que enseño son recomendadas por pediatras y terapeutas del desarrollo. Son ejercicios suaves, adaptados a cada edad, y fortalecen el vínculo madre-hijo."
+
+# Scripts de Respuesta por Escenario
+response_scripts:
+  bienvenida:
+    trigger: "nuevo lead"
+    message: "¡Hola! Soy Cynthia Rodríguez, especialista en desarrollo infantil temprano. Bienvenida a Einstein Kids 🧠✨ ¿Cuántos meses tiene tu bebé? Quiero enviarte información personalizada."
+    
+  informacion_masterclass:
+    trigger: "pregunta por masterclass"
+    message: "La masterclass es una clase magistral de 90 minutos donde te enseño técnicas comprobadas para estimular el desarrollo de tu bebé. Incluye acceso al grupo VIP y material digital. El valor es $1,997 MXN. ¿Te interesa?"
+    
+  objecion_precio:
+    trigger: "muy caro / no puedo pagar"
+    message: "Entiendo tu preocupación. Piensa que es una inversión en el futuro de tu bebé. Por $1,997 estás adquiriendo herramientas que usarás por años. También puedo ofrecerte un plan de pagos. ¿Te gustaría saber más?"
+    
+  urgencia:
+    trigger: "quiero empezar ya"
+    message: "¡Excelente decisión! Cada día cuenta en el desarrollo de tu bebé. Te envío el link de pago y confirmas cuando esté listo. ¿Te parece bien?"
+    
+  duda_edad:
+    trigger: "mi bebé ya tiene X meses"
+    message: "¡Perfecto! A esa edad hay técnicas específicas que son muy efectivas. Nunca es tarde para empezar. ¿Te cuento qué podemos hacer con tu bebé?"
+    
+  solicitud_prueba:
+    trigger: "quiero ver resultados / testimonios"
+    message: "Te puedo compartir testimonios de mamás que han visto cambios increíbles. También te explico cómo medirás el progreso de tu bebé. ¿Te gustaría ver algunos casos de éxito?"
+
+# Información de Pagos
+payment_info:
+  methods:
+    - "Transferencia bancaria"
+    - "Tarjeta de crédito/débito"
+    - "PayPal"
+    - "Mercado Pago"
+  
+  plans:
+    - "Pago único con 10% descuento"
+    - "3 pagos mensuales sin intereses"
+    - "6 pagos mensuales con 5% de recargo"
+  
+  guarantee: "Garantía de satisfacción de 30 días. Si no ves resultados, te devuelvo tu dinero."
+
+# Información del Grupo VIP
+vip_group:
+  name: "Einstein Kids VIP - Mamás Activas"
+  description: "Grupo exclusivo para mamás del programa"
+  benefits:
+    - "Apoyo diario de Cynthia"
+    - "Compartir experiencias con otras mamás"
+    - "Videos exclusivos semanales"
+    - "Sesiones de preguntas en vivo"
+    - "Descuentos en productos futuros"
+  
+  rules:
+    - "Respeto y apoyo mutuo"
+    - "Compartir solo experiencias positivas"
+    - "Preguntar sin miedo"
+    - "Mantener la información del grupo confidencial"
+
+# Información Técnica para el Agente
+agent_context:
+  tone: "Amigable, profesional, empática"
+  language: "Español neutro, evitar tecnicismos"
+  approach: "Escuchar primero, entender necesidades, ofrecer soluciones"
+  
+  escalation_rules:
+    - "Si preguntan sobre temas médicos específicos → Referir a pediatra"
+    - "Si muestran señales de depresión postparto → Referir a apoyo profesional"
+    - "Si hay emergencia con el bebé → Llamar al 911"
+    - "Si es un caso complejo → Programar llamada con Cynthia"
+    
+  dos_and_donts:
+    do:
+      - "Personalizar respuestas según edad del bebé"
+      - "Mostrar empatía con las preocupaciones de la mamá"
+      - "Ofrecer valor antes de hablar de precio"
+      - "Compartir casos de éxito relevantes"
+      - "Seguir up en 24-48 horas"
+      
+    dont:
+      - "No diagnosticar problemas médicos"
+      - "No prometer resultados específicos"
+      - "No presionar por venta"
+      - "No comparar bebés entre sí"
+      - "No dar consejos médicos directos"

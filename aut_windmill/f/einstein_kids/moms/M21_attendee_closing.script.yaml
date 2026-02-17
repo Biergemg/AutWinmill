@@ -1,0 +1,11 @@
+summary: "Einstein Kids - Moms Attendee Closing"
+description: "Triggers the closing/sale sequence for mothers who attended the event."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+  required:
+    - lead_id
+language: python3

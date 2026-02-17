@@ -1,0 +1,45 @@
+flow: dlq_requeue
+version: 1.0.0
+description: App operativa para visualizar DLQ y reintentar eventos.
+steps:
+  - name: select_event
+    type: manual
+    output: params
+    form:
+      - key: event_id
+        label: Event ID
+        type: text
+        required: true
+      - key: reason
+        label: Motivo de reintento
+        type: text
+        required: true
+  - name: confirm
+    type: manual
+    output: confirmed
+    message: "¿Seguro que deseas reintentar este evento?"
+  - name: requeue
+    type: sql
+    entry: scripts/core/requeue_from_dlq.sql
+    args:
+      event_id: ${step('select_event').output.event_id}
+    condition: step('confirm').succeeded
+  - name: audit_requeue
+    type: sql
+    entry: scripts/core/insert_audit.sql
+    args:
+      actor: "operator"
+      action: "requeue"
+      trace_id: null
+      workflow_id: "dlq_requeue"
+      event_id: ${step('select_event').output.event_id}
+      details: "{\"reason\":\"${step('select_event').output.reason}\"}"
+    condition: step('requeue').succeeded
+  - name: audit_platform_requeue
+    type: sql
+    entry: scripts/core/audit_platform_action.sql
+    args:
+      actor: "operator"
+      action: "requeue"
+      details: "{\"reason\":\"${step('select_event').output.reason}\",\"workflow\":\"dlq_requeue\"}"
+    condition: step('requeue').succeeded

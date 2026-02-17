@@ -1,0 +1,139 @@
+# Docker Compose para Ecosistema Cyn - Einstein Kids
+# Separaci??n clara entre CLIENTE, DESARROLLADOR y SISTEMA
+
+version: "3.8"
+
+services:
+  # Base de datos PostgreSQL - Configuraci??n del sistema
+  postgres-cyn:
+    image: postgres:${POSTGRES_VERSION:-15}
+    container_name: cyn_einstein_kids_postgres
+    restart: ${SYSTEM_RESTART_POLICY:-unless-stopped}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cyn_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-cyn_einstein_kids}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - cyn_pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - cyn_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cyn_user} -d ${POSTGRES_DB:-cyn_einstein_kids}"]
+      interval: ${SYSTEM_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${SYSTEM_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${SYSTEM_HEALTHCHECK_RETRIES:-3}
+
+  # Windmill para automatizaciones - Configuraci??n del sistema + Cliente
+  windmill-cyn:
+    image: ghcr.io/windmill-labs/windmill:${WINDMILL_VERSION:-latest}
+    container_name: cyn_einstein_kids_windmill
+    restart: ${SYSTEM_RESTART_POLICY:-unless-stopped}
+    depends_on:
+      postgres-cyn:
+        condition: service_healthy
+    environment:
+      # Configuraci??n del sistema
+      WM_URL: ${WM_URL:-http://localhost:8001}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cyn_user}:${POSTGRES_PASSWORD:-change_me}@postgres-cyn:5432/${POSTGRES_DB:-cyn_einstein_kids}
+      WM_ADMIN_EMAIL: ${WM_ADMIN_EMAIL:-admin@system.local}
+      WM_ADMIN_PASSWORD: ${WM_ADMIN_PASSWORD:-system_admin_secure}
+      WM_WORKSPACE: ${WM_WORKSPACE:-cyn-einstein-kids}
+      
+      # Configuraci??n del cliente (Cyn) - Variables reales que Cyn debe configurar
+      CLIENT_NAME: ${CLIENT_NAME:-Cyn}
+      CLIENT_BUSINESS: ${CLIENT_BUSINESS:-Einstein Kids}
+      CLIENT_PHONE: ${CLIENT_PHONE:-+1234567890}
+      CLIENT_EMAIL: ${CLIENT_EMAIL:-cyn@einstein-kids.com}
+      
+      # Credenciales del cliente - Cyn debe llenar estas
+      YCLOUD_API_KEY: ${YCLOUD_API_KEY:-CLIENT_YCLOUD_API_KEY_HERE}
+      ZOOM_API_KEY: ${ZOOM_API_KEY:-CLIENT_ZOOM_API_KEY_HERE}
+      ZOOM_API_SECRET: ${ZOOM_API_SECRET:-CLIENT_ZOOM_API_SECRET_HERE}
+      CALENDLY_API_KEY: ${CALENDLY_API_KEY:-CLIENT_CALENDLY_API_KEY_HERE}
+      CALENDLY_WEBHOOK_SECRET: ${CALENDLY_WEBHOOK_SECRET:-CLIENT_CALENDLY_WEBHOOK_SECRET_HERE}
+      CLAWBOT_API_KEY: ${CLAWBOT_API_KEY:-CLIENT_CLAWBOT_API_KEY_HERE}
+      CLAWBOT_WEBHOOK_SECRET: ${CLAWBOT_WEBHOOK_SECRET:-CLIENT_CLAWBOT_WEBHOOK_SECRET_HERE}
+      
+      # Configuraci??n de seguridad del cliente
+      CLIENT_JWT_SECRET: ${CLIENT_JWT_SECRET:-CLIENT_JWT_SECRET_KEY_HERE_MIN_32_CHARS}
+      CLIENT_ENCRYPTION_KEY: ${CLIENT_ENCRYPTION_KEY:-CLIENT_ENCRYPTION_KEY_HERE_32_CHARS}
+      
+      # Configuraci??n de masterclass del cliente
+      CLIENT_MASTERCLASS_DURATION_MINUTES: ${CLIENT_MASTERCLASS_DURATION_MINUTES:-90}
+      CLIENT_MASTERCLASS_MAX_ATTENDEES: ${CLIENT_MASTERCLASS_MAX_ATTENDEES:-100}
+      CLIENT_MASTERCLASS_SHOWUP_TARGET_RATE: ${CLIENT_MASTERCLASS_SHOWUP_TARGET_RATE:-70}
+      
+      # Configuraci??n de comunicaci??n del cliente
+      CLIENT_WHATSAPP_NUMBER: ${CLIENT_WHATSAPP_NUMBER:-+1234567890}
+      CLIENT_BUSINESS_HOURS: ${CLIENT_BUSINESS_HOURS:-9:00-18:00 America/New_York}
+      CLIENT_TIMEZONE: ${CLIENT_TIMEZONE:-America/New_York}
+      
+      # URLs del cliente
+      CLIENT_WEBHOOK_BASE_URL: ${CLIENT_WEBHOOK_BASE_URL:-https://cyn-einstein-kids.com/webhooks}
+      CLIENT_FRONTEND_BASE_URL: ${CLIENT_FRONTEND_BASE_URL:-https://cyn-einstein-kids.com}
+      CLIENT_API_BASE_URL: ${CLIENT_API_BASE_URL:-https://cyn-einstein-kids.com/api}
+      
+    ports:
+      - "${DOCKER_WINDMILL_PORT:-8001}:8000"
+    volumes:
+      - cyn_windmill_data:/data
+      # Montar scripts y configuraciones de Einstein Kids
+      - ../f/einstein_kids:/workspace/einstein_kids
+      - ../flows:/workspace/flows
+      - ../resources:/workspace/resources
+    networks:
+      - cyn_network
+    labels:
+      - "com.einstein-kids.service=windmill"
+      - "com.einstein-kids.owner=client"
+
+  # Redis para cach?? y colas - Configuraci??n del sistema
+  redis-cyn:
+    image: redis:${REDIS_VERSION:-7-alpine}
+    container_name: cyn_einstein_kids_redis
+    restart: ${SYSTEM_RESTART_POLICY:-unless-stopped}
+    ports:
+      - "${DOCKER_REDIS_PORT:-6380}:6379"
+    volumes:
+      - cyn_redis_data:/data
+    networks:
+      - cyn_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: ${SYSTEM_HEALTHCHECK_INTERVAL:-30s}
+      timeout: ${SYSTEM_HEALTHCHECK_TIMEOUT:-10s}
+      retries: ${SYSTEM_HEALTHCHECK_RETRIES:-3}
+
+  # Servicio de monitoreo para el ecosistema - Configuraci??n del sistema
+  monitoring-cyn:
+    image: prom/prometheus:${PROMETHEUS_VERSION:-latest}
+    container_name: cyn_einstein_kids_monitoring
+    restart: ${SYSTEM_RESTART_POLICY:-unless-stopped}
+    ports:
+      - "${DOCKER_PROMETHEUS_PORT:-9091}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - cyn_prometheus_data:/prometheus
+    networks:
+      - cyn_network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+
+volumes:
+  cyn_pgdata:
+  cyn_windmill_data:
+  cyn_redis_data:
+  cyn_prometheus_data:
+
+networks:
+  cyn_network:
+    driver: bridge
+    labels:
+      - "com.einstein-kids.network=cyn"

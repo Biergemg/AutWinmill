@@ -1,0 +1,40 @@
+summary: "Einstein Kids - Payment Claim Decide"
+description: "Confirm or reject payment claim."
+language: python3
+content: |
+  from __future__ import annotations
+  import psycopg2
+
+  def main(sale_id: str, action: str, actor: str, reason: str | None = None, pg_resource: dict | None = None) -> dict:
+      action = (action or "").upper().strip()
+      if action not in ("CONFIRM", "REJECT"):
+          return {"ok": False, "error": "invalid_action"}
+      if not pg_resource:
+          return {"ok": False, "error": "missing_pg_resource"}
+
+      status = "confirmed" if action == "CONFIRM" else "rejected"
+      conn = psycopg2.connect(**pg_resource)
+      try:
+          with conn.cursor() as cur:
+              cur.execute("SELECT lead_id FROM ek_sales WHERE sale_id=%s FOR UPDATE", (sale_id,))
+              row = cur.fetchone()
+              if not row:
+                  return {"ok": False, "error": "sale_not_found"}
+              lead_id = row[0]
+
+              cur.execute(
+                  "UPDATE ek_sales SET status=%s, confirmed_by=%s, confirmed_at=NOW(), updated_at=NOW() WHERE sale_id=%s",
+                  (status, actor, sale_id),
+              )
+
+              if status == "confirmed":
+                  cur.execute("UPDATE ek_leads SET stage='CUSTOMER', score=score+100, updated_at=NOW() WHERE lead_id=%s", (lead_id,))
+                  cur.execute("UPDATE ek_jobs SET status='cancelled', updated_at=NOW() WHERE lead_id=%s AND status='scheduled'", (lead_id,))
+
+          conn.commit()
+          return {"ok": True, "sale_id": sale_id, "decision": action, "status": status, "reason": reason}
+      except Exception as e:
+          conn.rollback()
+          return {"ok": False, "error": str(e)}
+      finally:
+          conn.close()

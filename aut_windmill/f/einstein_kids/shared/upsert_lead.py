@@ -1,0 +1,120 @@
+import os
+import logging
+from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
+
+# Configuración básica de logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def ms_to_iso(ms_timestamp):
+    if not ms_timestamp:
+        return None
+    return datetime.fromtimestamp(ms_timestamp / 1000).isoformat()
+
+def main(
+    lead_data: dict, 
+    pg_resource: dict = None
+):
+    """
+    Upsert a lead into ek_leads.
+    
+    Args:
+        lead_data: Dict containing keys like 'phone', 'email', 'name', 'avatar', 'utm_*', etc.
+        pg_resource: Windmill PostgreSQL resource dictionary (host, port, user, password, dbname).
+    
+    Returns:
+        dict: { "success": bool, "lead_id": str, "is_new": bool, "error": str }
+    """
+    # Si se ejecuta fuera de Windmill con env vars directas, adaptar aquí.
+    # Asumimos que Windmill pasa pg_resource.
+    
+    if not pg_resource:
+        # Fallback para desarrollo local si se usan env vars
+        pg_resource = {
+            "host": os.getenv("PGHOST"),
+            "port": os.getenv("PGPORT"),
+            "user": os.getenv("PGUSER"),
+            "password": os.getenv("PGPASSWORD"),
+            "dbname": os.getenv("PGDATABASE")
+        }
+
+    conn = None
+    try:
+        conn = psycopg2.connect(**pg_resource)
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+
+        # 1. Normalizar claves de entrada
+        phone = lead_data.get("phone")
+        phone_norm = lead_data.get("phone_normalized") # Debe venir ya normalizado por el caller si es posible
+        email = lead_data.get("email")
+        # Si email es cadena vacía, tratar como None para respetar constraints UNIQUE
+        if email == "": email = None
+        
+        name = lead_data.get("name") or "Unknown"
+        avatar = lead_data.get("avatar") or "mother"
+        
+        # 2. Query de Upsert (On Conflict)
+        # Prioridad: Phone Normalized > Email
+        
+        # Intentamos buscar primero para saber si es nuevo (opcional, pero útil para lógica)
+        lead_id = None
+        is_new = False
+        
+        # Estrategia simplificada: Insert or Update basado en conflict de phone_normalized
+        # OJO: ek_leads tiene constraints unicos en phone y email.
+        
+        query = """
+        INSERT INTO ek_leads (
+            name, email, phone, phone_normalized, avatar, 
+            utm_source, utm_medium, utm_campaign, utm_content, landing_id,
+            event_start_at
+        ) VALUES (
+            %(name)s, %(email)s, %(phone)s, %(phone_normalized)s, %(avatar)s,
+            %(utm_source)s, %(utm_medium)s, %(utm_campaign)s, %(utm_content)s, %(landing_id)s,
+            %(event_start_at)s
+        )
+        ON CONFLICT (phone_normalized) DO UPDATE SET
+            name = EXCLUDED.name,
+            email = COALESCE(ek_leads.email, EXCLUDED.email), -- Mantiene email viejo si existe
+            avatar = EXCLUDED.avatar,
+            updated_at = NOW()
+        RETURNING lead_id, (xmax = 0) AS is_new_record;
+        """
+        
+        # Si no hay phone_normalized, esto fallará o requerirá otra estrategia.
+        # Asumimos que el caller SIEMPRE normaliza.
+        
+        params = {
+            "name": name,
+            "email": email,
+            "phone": phone,
+            "phone_normalized": phone_norm,
+            "avatar": avatar,
+            "utm_source": lead_data.get("utm_source"),
+            "utm_medium": lead_data.get("utm_medium"),
+            "utm_campaign": lead_data.get("utm_campaign"),
+            "utm_content": lead_data.get("utm_content"),
+            "landing_id": lead_data.get("landing_id"),
+            "event_start_at": lead_data.get("event_start_at")
+        }
+        
+        cur.execute(query, params)
+        result = cur.fetchone()
+        conn.commit()
+        
+        return {
+            "success": True,
+            "lead_id": result["lead_id"],
+            "is_new": result["is_new_record"],
+            "error": None
+        }
+
+    except Exception as e:
+        if conn: conn.rollback()
+        logger.error(f"Error upserting lead: {e}")
+        return {"success": False, "error": str(e)}
+        
+    finally:
+        if conn: conn.close()

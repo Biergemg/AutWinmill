@@ -1,0 +1,14 @@
+summary: "Einstein Kids - Moms Pre-Event Sequence"
+description: "Initializes the sequence for mothers before the masterclass event."
+schema:
+  $schema: "https://json-schema.org/draft/2020-12/schema"
+  type: object
+  properties:
+    lead_id:
+      type: string
+    event_start_at:
+      type: string
+  required:
+    - lead_id
+    - event_start_at
+language: python3

@@ -1,0 +1,35 @@
+summary: "Einstein Kids - Normalize Phone"
+description: "Normalizes phone numbers to E.164 format for WhatsApp compatibility."
+language: python3
+content: |
+  import re
+  
+  
+  def normalize_phone_e164_mx(raw: str) -> str | None:
+      """
+      Minimal MX-focused E.164 normalization (placeholder).
+      - Keep digits only
+      - Accept +52, 52, or local 10-digit numbers and normalize to +52XXXXXXXXXX
+      Replace with libphonenumber in production.
+      """
+      if not raw:
+          return None
+      digits = re.sub(r"\\D+", "", raw)
+      if len(digits) < 10:
+          return None
+      if digits.startswith("52") and len(digits) == 12:
+          return f"+{digits}"
+      if len(digits) == 10:
+          return f"+52{digits}"
+      if raw.strip().startswith("+") and len(digits) in (12, 13, 14, 15):
+          return f"+{digits}"
+      return None
+  
+  
+  def main(phone: str) -> dict:
+      norm = normalize_phone_e164_mx(phone)
+      if not norm:
+          return {"ok": False, "error": "invalid_phone", "phone_normalized": None}
+      return {"ok": True, "phone_normalized": norm}
+  
+  
