@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  operator-console:
+    build:
+      context: ../..
+      dockerfile: apps/operator_console/Dockerfile
+    container_name: autwinmill_operator_console
+    restart: unless-stopped
+    ports:
+      - "${OPERATOR_PORT:-8088}:8088"
+    environment:
+      OPERATOR_ADMIN_USER: "${OPERATOR_ADMIN_USER:-admin}"
+      OPERATOR_ADMIN_PASSWORD: "${OPERATOR_ADMIN_PASSWORD:-change_me_now}"
+      OPERATOR_JWT_SECRET: "${OPERATOR_JWT_SECRET:-change_me_now_32_chars_min}"
+      OPERATOR_JWT_TTL_MINUTES: "${OPERATOR_JWT_TTL_MINUTES:-480}"
+      OPERATOR_DATA_DIR: "/app/data"
+      OPERATOR_DB_URL: "${OPERATOR_DB_URL:-}"
+      WINDMILL_API_TOKEN: "${WINDMILL_API_TOKEN:-}"
+    volumes:
+      - operator_console_data:/app/data
+
+volumes:
+  operator_console_data:
+

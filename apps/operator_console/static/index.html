@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AutWinmill Operator Console</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --ink: #0e1a2b;
+      --muted: #5b6777;
+      --ok: #18794e;
+      --danger: #ba1a1a;
+      --accent: #0d6efd;
+      --line: #d9e1ea;
+    }
+    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--ink); }
+    .wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .kpi { padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+    .kpi b { font-size: 24px; display: block; margin-top: 8px; }
+    input, select, textarea, button {
+      width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid var(--line);
+      font-family: inherit;
+    }
+    textarea { min-height: 80px; }
+    button { background: var(--accent); color: #fff; border: 0; cursor: pointer; }
+    button.secondary { background: #445163; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 8px; font-size: 13px; }
+    th { color: var(--muted); font-weight: 600; }
+    .hidden { display: none; }
+    .ok { color: var(--ok); }
+    .bad { color: var(--danger); }
+    .head { display: flex; justify-content: space-between; align-items: center; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab { width: auto; padding: 8px 12px; }
+    @media (max-width: 980px) {
+      .row { grid-template-columns: 1fr 1fr; }
+      .grid2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div id="login" class="card">
+      <h2>Operator Login</h2>
+      <div class="grid2">
+        <input id="username" placeholder="Username" value="admin" />
+        <input id="password" type="password" placeholder="Password" />
+      </div>
+      <div style="margin-top:12px;">
+        <button onclick="doLogin()">Login</button>
+      </div>
+      <div id="loginMsg" class="bad" style="margin-top:8px;"></div>
+    </div>
+
+    <div id="app" class="hidden">
+      <div class="head card">
+        <div>
+          <h2 style="margin:0;">AutWinmill Operator Console</h2>
+          <div style="color:var(--muted);font-size:13px;">Windmill as execution engine, your own operator UI.</div>
+        </div>
+        <button class="secondary" style="width:auto;" onclick="loadAll()">Refresh</button>
+      </div>
+
+      <div class="card row">
+        <div class="kpi"><span>Clients</span><b id="kClients">-</b></div>
+        <div class="kpi"><span>Automations</span><b id="kAutomations">-</b></div>
+        <div class="kpi"><span>Executions 24h</span><b id="kExec24">-</b></div>
+        <div class="kpi"><span>Success 24h</span><b id="kSucc24">-</b></div>
+      </div>
+
+      <div class="card">
+        <div class="tabs">
+          <button class="tab" onclick="showTab('clientsTab')">Clients</button>
+          <button class="tab" onclick="showTab('autosTab')">Automations</button>
+          <button class="tab" onclick="showTab('execTab')">Executions</button>
+        </div>
+
+        <div id="clientsTab">
+          <h3>Clients</h3>
+          <div class="grid2">
+            <input id="clientName" placeholder="Client name" />
+            <input id="clientIndustry" placeholder="Industry" value="general" />
+            <input id="clientOwner" placeholder="Owner" value="unassigned" />
+            <select id="clientStatus"><option>active</option><option>paused</option></select>
+          </div>
+          <div style="margin-top:12px;"><button onclick="createClient()">Create client</button></div>
+          <table id="clientsTable"></table>
+        </div>
+
+        <div id="autosTab" class="hidden">
+          <h3>Automations</h3>
+          <div class="grid2">
+            <input id="autoClientId" type="number" placeholder="Client ID" />
+            <input id="autoName" placeholder="Automation name" />
+            <input id="autoChannel" placeholder="Channel (email, social, whatsapp)" value="mixed" />
+            <select id="autoStatus"><option>active</option><option>paused</option></select>
+            <input id="autoMethod" placeholder="Method" value="POST" />
+            <input id="autoEndpoint" placeholder="Run endpoint URL (Windmill/API/Webhook)" />
+            <textarea id="autoPayload" placeholder='{"sample":"value"}'>{}</textarea>
+          </div>
+          <div style="margin-top:12px;"><button onclick="createAutomation()">Create automation</button></div>
+          <table id="autosTable"></table>
+        </div>
+
+        <div id="execTab" class="hidden">
+          <h3>Executions</h3>
+          <table id="execTable"></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let token = "";
+    const api = async (path, method = "GET", body = null) => {
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : null });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Request failed");
+      }
+      return res.status === 204 ? null : res.json();
+    };
+
+    const showTab = (id) => {
+      ["clientsTab", "autosTab", "execTab"].forEach((t) => document.getElementById(t).classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
+    };
+
+    async function doLogin() {
+      try {
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+        const data = await api("/api/auth/login", "POST", { username, password });
+        token = data.access_token;
+        document.getElementById("login").classList.add("hidden");
+        document.getElementById("app").classList.remove("hidden");
+        await loadAll();
+      } catch (e) {
+        document.getElementById("loginMsg").innerText = "Login failed: " + e.message;
+      }
+    }
+
+    async function loadSummary() {
+      const data = await api("/api/summary");
+      document.getElementById("kClients").innerText = data.clients;
+      document.getElementById("kAutomations").innerText = data.automations;
+      document.getElementById("kExec24").innerText = data.executions_24h;
+      document.getElementById("kSucc24").innerText = data.success_24h;
+    }
+
+    async function loadClients() {
+      const data = await api("/api/clients");
+      const html = [
+        "<tr><th>ID</th><th>Name</th><th>Industry</th><th>Status</th><th>Owner</th><th>Created</th></tr>",
+        ...data.map(c => `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.industry}</td><td>${c.status}</td><td>${c.owner}</td><td>${c.created_at}</td></tr>`)
+      ].join("");
+      document.getElementById("clientsTable").innerHTML = html;
+    }
+
+    async function loadAutomations() {
+      const data = await api("/api/automations");
+      const html = [
+        "<tr><th>ID</th><th>Client</th><th>Name</th><th>Channel</th><th>Status</th><th>Run</th></tr>",
+        ...data.map(a => `<tr><td>${a.id}</td><td>${a.client_id}</td><td>${a.name}</td><td>${a.channel}</td><td>${a.status}</td><td><button style='width:auto;' onclick='runAutomation(${a.id})'>Run</button></td></tr>`)
+      ].join("");
+      document.getElementById("autosTable").innerHTML = html;
+    }
+
+    async function loadExecutions() {
+      const data = await api("/api/executions?limit=50");
+      const html = [
+        "<tr><th>ID</th><th>Client</th><th>Automation</th><th>Status</th><th>Code</th><th>ms</th><th>When</th></tr>",
+        ...data.map(e => `<tr><td>${e.id}</td><td>${e.client_id}</td><td>${e.automation_id}</td><td class='${e.status === "success" ? "ok" : "bad"}'>${e.status}</td><td>${e.response_code || ""}</td><td>${e.duration_ms || ""}</td><td>${e.created_at}</td></tr>`)
+      ].join("");
+      document.getElementById("execTable").innerHTML = html;
+    }
+
+    async function createClient() {
+      await api("/api/clients", "POST", {
+        name: document.getElementById("clientName").value,
+        industry: document.getElementById("clientIndustry").value,
+        owner: document.getElementById("clientOwner").value,
+        status: document.getElementById("clientStatus").value
+      });
+      await loadAll();
+    }
+
+    async function createAutomation() {
+      await api("/api/automations", "POST", {
+        client_id: Number(document.getElementById("autoClientId").value),
+        name: document.getElementById("autoName").value,
+        channel: document.getElementById("autoChannel").value,
+        status: document.getElementById("autoStatus").value,
+        run_endpoint: document.getElementById("autoEndpoint").value,
+        http_method: document.getElementById("autoMethod").value,
+        payload_template: document.getElementById("autoPayload").value
+      });
+      await loadAll();
+    }
+
+    async function runAutomation(id) {
+      await api(`/api/automations/${id}/run`, "POST", {});
+      await loadAll();
+      showTab("execTab");
+    }
+
+    async function loadAll() {
+      await Promise.all([loadSummary(), loadClients(), loadAutomations(), loadExecutions()]);
+    }
+  </script>
+</body>
+</html>
+
