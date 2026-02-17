@@ -41,13 +41,4 @@ credentials.yml
 *.pid
 tmp/
 temp/
-
-# Generated / caches inside repo
-aut_windmill/node_modules/
-aut_windmill/**/__pycache__/
-aut_windmill/.pytest_cache/
-aut_windmill/.coverage
-aut_windmill/tests/**/__pycache__/
-aut_windmill/scripts/**/__pycache__/
-aut_windmill/src/**/__pycache__/
-
+.benchmarks/
