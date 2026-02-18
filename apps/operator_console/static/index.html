@@ -1,116 +1,443 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AutWinmill Operator Console</title>
+  <meta name="description"
+    content="Operational control panel for AutWinmill automation flows and client management. Private access only." />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta property="og:title" content="AutWinmill Operator Console" />
+  <meta property="og:description" content="Manage automations and clients. Operational control panel." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="AutWinmill" />
   <style>
     :root {
-      --bg: #f6f8fb;
-      --card: #ffffff;
-      --ink: #0e1a2b;
-      --muted: #5b6777;
-      --ok: #18794e;
-      --danger: #ba1a1a;
-      --accent: #0d6efd;
-      --line: #d9e1ea;
+      --bg-0: #f3fbf7;
+      --bg-1: #e3f0ff;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: #ffffff;
+      --ink: #132238;
+      --muted: #577089;
+      --line: #d4e0ec;
+      --brand-0: #00a87a;
+      --brand-1: #1187d6;
+      --ok: #0e9f6e;
+      --bad: #d64545;
+      --shadow: 0 12px 36px rgba(30, 67, 107, 0.14);
+      --r-lg: 18px;
+      --r-md: 12px;
+      --r-sm: 10px;
     }
-    body { margin: 0; font-family: "Segoe UI", Tahoma, sans-serif; background: var(--bg); color: var(--ink); }
-    .wrap { max-width: 1200px; margin: 24px auto; padding: 0 16px; }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-    .kpi { padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
-    .kpi b { font-size: 24px; display: block; margin-top: 8px; }
-    input, select, textarea, button {
-      width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; border: 1px solid var(--line);
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Trebuchet MS", "Segoe UI Variable", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(600px 260px at 8% 8%, #d7f4ee 0%, transparent 72%),
+        radial-gradient(620px 280px at 92% 2%, #dbe8ff 0%, transparent 68%),
+        linear-gradient(135deg, var(--bg-0), var(--bg-1));
+    }
+
+    .wrap {
+      max-width: 1240px;
+      margin: 28px auto;
+      padding: 0 16px 28px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--r-lg);
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .login-card {
+      max-width: 680px;
+      margin: 12vh auto 0;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--brand-1);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 26px;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .kpi {
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      padding: 14px;
+      background: var(--panel-strong);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .kpi:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(27, 63, 101, 0.12);
+    }
+
+    .kpi span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .kpi b {
+      font-size: 30px;
+      display: block;
+      margin-top: 8px;
+      line-height: 1;
+    }
+
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    input,
+    select,
+    textarea,
+    button {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--r-sm);
+      padding: 11px 12px;
       font-family: inherit;
+      font-size: 14px;
     }
-    textarea { min-height: 80px; }
-    button { background: var(--accent); color: #fff; border: 0; cursor: pointer; }
-    button.secondary { background: #445163; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { border-bottom: 1px solid var(--line); text-align: left; padding: 8px; font-size: 13px; }
-    th { color: var(--muted); font-weight: 600; }
-    .hidden { display: none; }
-    .ok { color: var(--ok); }
-    .bad { color: var(--danger); }
-    .head { display: flex; justify-content: space-between; align-items: center; }
-    .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab { width: auto; padding: 8px 12px; }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: 2px solid rgba(17, 135, 214, 0.18);
+      border-color: #8fc2eb;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--brand-0), var(--brand-1));
+      transition: transform 0.15s ease, filter 0.15s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.04);
+    }
+
+    button.secondary {
+      width: auto;
+      background: #34485e;
+      padding-inline: 14px;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--panel-strong);
+    }
+
+    .tab {
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+      font-weight: 700;
+    }
+
+    .tab.active {
+      color: #113a60;
+      border-color: #b9d5ea;
+      background: linear-gradient(135deg, #e9f7f2, #e8f2ff);
+    }
+
+    .section-head {
+      margin: 0 0 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .section-head h3 {
+      margin: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      overflow: hidden;
+      border-radius: 10px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 9px 8px;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      background: #f8fbff;
+      position: sticky;
+      top: 0;
+    }
+
+    tr:nth-child(even) td {
+      background: rgba(244, 249, 255, 0.72);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      margin-right: 6px;
+      background: var(--ok);
+      box-shadow: 0 0 0 3px rgba(14, 159, 110, 0.2);
+    }
+
+    .mini {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .ok {
+      color: var(--ok);
+      font-weight: 700;
+    }
+
+    .bad {
+      color: var(--bad);
+      font-weight: 700;
+    }
+
+    .bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .notice {
+      background: #ecf8f4;
+      color: #1a6f53;
+      border: 1px solid #c8ebde;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 13px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+    }
+
+    .notice.error {
+      background: #fff2f2;
+      border-color: #f4caca;
+      color: #8a3030;
+    }
+
+    .entrance {
+      animation: riseIn 0.45s ease both;
+    }
+
+    @keyframes riseIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     @media (max-width: 980px) {
-      .row { grid-template-columns: 1fr 1fr; }
-      .grid2 { grid-template-columns: 1fr; }
+      .row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .grid2 {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .row {
+        grid-template-columns: 1fr;
+      }
+
+      .tabs {
+        grid-template-columns: 1fr;
+      }
+
+      .wrap {
+        margin-top: 14px;
+      }
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
-    <div id="login" class="card">
-      <h2>Operator Login</h2>
+    <div id="login" class="card login-card entrance">
+      <p class="eyebrow">Operator Access</p>
+      <h2>Welcome back</h2>
+      <p class="muted">Manage elite automations with your own control layer.</p>
       <div class="grid2">
         <input id="username" placeholder="Username" value="admin" />
         <input id="password" type="password" placeholder="Password" />
+        <input id="tenantLogin" placeholder="Tenant / Workspace" value="default" />
       </div>
       <div style="margin-top:12px;">
-        <button onclick="doLogin()">Login</button>
+        <button onclick="doLogin()">Enter console</button>
       </div>
-      <div id="loginMsg" class="bad" style="margin-top:8px;"></div>
+      <div id="loginMsg" class="bad mini" style="margin-top:8px;"></div>
     </div>
 
     <div id="app" class="hidden">
-      <div class="head card">
+      <div class="card hero entrance">
         <div>
-          <h2 style="margin:0;">AutWinmill Operator Console</h2>
-          <div style="color:var(--muted);font-size:13px;">Windmill as execution engine, your own operator UI.</div>
+          <p class="eyebrow">AutWinmill</p>
+          <h2>Operator Console</h2>
+          <div class="muted">Windmill as execution engine, your own premium control UI.</div>
         </div>
-        <button class="secondary" style="width:auto;" onclick="loadAll()">Refresh</button>
+        <div class="bar">
+          <div class="mini"><span class="status-dot"></span>Tenant: <b id="tenantLabel">default</b></div>
+          <input id="tenantRuntime" style="max-width:170px;" placeholder="Cambiar tenant" />
+          <button class="secondary" onclick="switchTenant()">Switch</button>
+          <button class="secondary" onclick="loadAll()">Refresh</button>
+        </div>
       </div>
 
-      <div class="card row">
+      <div id="globalMsg" class="notice hidden"></div>
+
+      <div class="card row entrance">
         <div class="kpi"><span>Clients</span><b id="kClients">-</b></div>
         <div class="kpi"><span>Automations</span><b id="kAutomations">-</b></div>
         <div class="kpi"><span>Executions 24h</span><b id="kExec24">-</b></div>
         <div class="kpi"><span>Success 24h</span><b id="kSucc24">-</b></div>
       </div>
 
-      <div class="card">
+      <div class="card entrance">
         <div class="tabs">
-          <button class="tab" onclick="showTab('clientsTab')">Clients</button>
-          <button class="tab" onclick="showTab('autosTab')">Automations</button>
-          <button class="tab" onclick="showTab('execTab')">Executions</button>
+          <button id="tab-clientsTab" class="tab active" onclick="showTab('clientsTab')">Clients</button>
+          <button id="tab-autosTab" class="tab" onclick="showTab('autosTab')">Automations</button>
+          <button id="tab-execTab" class="tab" onclick="showTab('execTab')">Executions</button>
         </div>
 
         <div id="clientsTab">
-          <h3>Clients</h3>
+          <div class="section-head">
+            <h3>Client workspace</h3>
+            <span class="mini">Create and operate client pods</span>
+          </div>
           <div class="grid2">
             <input id="clientName" placeholder="Client name" />
             <input id="clientIndustry" placeholder="Industry" value="general" />
             <input id="clientOwner" placeholder="Owner" value="unassigned" />
-            <select id="clientStatus"><option>active</option><option>paused</option></select>
+            <select id="clientStatus">
+              <option>active</option>
+              <option>paused</option>
+            </select>
           </div>
           <div style="margin-top:12px;"><button onclick="createClient()">Create client</button></div>
-          <table id="clientsTable"></table>
+          <div style="margin-top:12px; overflow:auto;">
+            <table id="clientsTable"></table>
+          </div>
         </div>
 
         <div id="autosTab" class="hidden">
-          <h3>Automations</h3>
+          <div class="section-head">
+            <h3>Automation studio</h3>
+            <span class="mini">Design and trigger flows fast</span>
+          </div>
           <div class="grid2">
             <input id="autoClientId" type="number" placeholder="Client ID" />
             <input id="autoName" placeholder="Automation name" />
             <input id="autoChannel" placeholder="Channel (email, social, whatsapp)" value="mixed" />
-            <select id="autoStatus"><option>active</option><option>paused</option></select>
+            <select id="autoStatus">
+              <option>active</option>
+              <option>paused</option>
+            </select>
             <input id="autoMethod" placeholder="Method" value="POST" />
             <input id="autoEndpoint" placeholder="Run endpoint URL (Windmill/API/Webhook)" />
             <textarea id="autoPayload" placeholder='{"sample":"value"}'>{}</textarea>
           </div>
           <div style="margin-top:12px;"><button onclick="createAutomation()">Create automation</button></div>
-          <table id="autosTable"></table>
+          <div style="margin-top:12px; overflow:auto;">
+            <table id="autosTable"></table>
+          </div>
         </div>
 
         <div id="execTab" class="hidden">
-          <h3>Executions</h3>
-          <table id="execTable"></table>
+          <div class="section-head">
+            <h3>Execution radar</h3>
+            <span class="mini">Recent operations and response status</span>
+          </div>
+          <div style="overflow:auto;">
+            <table id="execTable"></table>
+          </div>
         </div>
       </div>
     </div>
@@ -118,31 +445,65 @@
 
   <script>
     let token = "";
+    let tenant = localStorage.getItem("operatorTenant") || "default";
+
     const api = async (path, method = "GET", body = null) => {
       const headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = "Bearer " + token;
+      headers["X-Operator-Tenant"] = tenant;
       const res = await fetch(path, { method, headers, body: body ? JSON.stringify(body) : null });
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || "Request failed");
+        let errMsg = "Request failed";
+        try {
+          const json = await res.json();
+          if (Array.isArray(json.detail)) {
+            // Handle Pydantic validation errors
+            errMsg = json.detail.map((e) => `${e.loc[e.loc.length - 1]}: ${e.msg}`).join(" | ");
+          } else {
+            errMsg = json.detail || json.message || await res.text();
+          }
+        } catch (e) {
+          errMsg = await res.text() || errMsg;
+        }
+        throw new Error(errMsg);
       }
       return res.status === 204 ? null : res.json();
     };
 
+    const showNotice = (text, isError = false) => {
+      const box = document.getElementById("globalMsg");
+      box.classList.remove("hidden", "error");
+      box.textContent = text;
+      if (isError) box.classList.add("error");
+      setTimeout(() => box.classList.add("hidden"), 3400);
+    };
+
     const showTab = (id) => {
-      ["clientsTab", "autosTab", "execTab"].forEach((t) => document.getElementById(t).classList.add("hidden"));
+      ["clientsTab", "autosTab", "execTab"].forEach((tabId) => {
+        document.getElementById(tabId).classList.add("hidden");
+        document.getElementById("tab-" + tabId).classList.remove("active");
+      });
       document.getElementById(id).classList.remove("hidden");
+      document.getElementById("tab-" + id).classList.add("active");
     };
 
     async function doLogin() {
       try {
+        const selectedTenant = document.getElementById("tenantLogin").value.trim();
+        if (!validTenant(selectedTenant)) {
+          throw new Error("Tenant invalido");
+        }
+        tenant = selectedTenant;
+        localStorage.setItem("operatorTenant", tenant);
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
         const data = await api("/api/auth/login", "POST", { username, password });
         token = data.access_token;
         document.getElementById("login").classList.add("hidden");
         document.getElementById("app").classList.remove("hidden");
+        syncTenantUi();
         await loadAll();
+        showNotice("Console ready. You are connected.");
       } catch (e) {
         document.getElementById("loginMsg").innerText = "Login failed: " + e.message;
       }
@@ -160,7 +521,7 @@
       const data = await api("/api/clients");
       const html = [
         "<tr><th>ID</th><th>Name</th><th>Industry</th><th>Status</th><th>Owner</th><th>Created</th></tr>",
-        ...data.map(c => `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.industry}</td><td>${c.status}</td><td>${c.owner}</td><td>${c.created_at}</td></tr>`)
+        ...data.map((c) => `<tr><td>${c.id}</td><td>${c.name}</td><td>${c.industry}</td><td>${c.status}</td><td>${c.owner}</td><td>${c.created_at}</td></tr>`)
       ].join("");
       document.getElementById("clientsTable").innerHTML = html;
     }
@@ -169,7 +530,7 @@
       const data = await api("/api/automations");
       const html = [
         "<tr><th>ID</th><th>Client</th><th>Name</th><th>Channel</th><th>Status</th><th>Run</th></tr>",
-        ...data.map(a => `<tr><td>${a.id}</td><td>${a.client_id}</td><td>${a.name}</td><td>${a.channel}</td><td>${a.status}</td><td><button style='width:auto;' onclick='runAutomation(${a.id})'>Run</button></td></tr>`)
+        ...data.map((a) => `<tr><td>${a.id}</td><td>${a.client_id}</td><td>${a.name}</td><td>${a.channel}</td><td>${a.status}</td><td><button style='width:auto;' onclick='runAutomation(${a.id})'>Run</button></td></tr>`)
       ].join("");
       document.getElementById("autosTable").innerHTML = html;
     }
@@ -178,44 +539,95 @@
       const data = await api("/api/executions?limit=50");
       const html = [
         "<tr><th>ID</th><th>Client</th><th>Automation</th><th>Status</th><th>Code</th><th>ms</th><th>When</th></tr>",
-        ...data.map(e => `<tr><td>${e.id}</td><td>${e.client_id}</td><td>${e.automation_id}</td><td class='${e.status === "success" ? "ok" : "bad"}'>${e.status}</td><td>${e.response_code || ""}</td><td>${e.duration_ms || ""}</td><td>${e.created_at}</td></tr>`)
+        ...data.map((e) => `<tr><td>${e.id}</td><td>${e.client_id}</td><td>${e.automation_id}</td><td class='${e.status === "success" ? "ok" : "bad"}'>${e.status}</td><td>${e.response_code || ""}</td><td>${e.duration_ms || ""}</td><td>${e.created_at}</td></tr>`)
       ].join("");
       document.getElementById("execTable").innerHTML = html;
     }
 
     async function createClient() {
-      await api("/api/clients", "POST", {
-        name: document.getElementById("clientName").value,
-        industry: document.getElementById("clientIndustry").value,
-        owner: document.getElementById("clientOwner").value,
-        status: document.getElementById("clientStatus").value
-      });
-      await loadAll();
+      try {
+        const name = document.getElementById("clientName").value.trim();
+        if (name.length < 2) throw new Error("Name must be at least 2 characters");
+
+        await api("/api/clients", "POST", {
+          name: name,
+          industry: document.getElementById("clientIndustry").value,
+          owner: document.getElementById("clientOwner").value,
+          status: document.getElementById("clientStatus").value
+        });
+        await loadAll();
+        showNotice("Client created.");
+      } catch (e) {
+        showNotice("Create client failed: " + e.message, true);
+      }
     }
 
     async function createAutomation() {
-      await api("/api/automations", "POST", {
-        client_id: Number(document.getElementById("autoClientId").value),
-        name: document.getElementById("autoName").value,
-        channel: document.getElementById("autoChannel").value,
-        status: document.getElementById("autoStatus").value,
-        run_endpoint: document.getElementById("autoEndpoint").value,
-        http_method: document.getElementById("autoMethod").value,
-        payload_template: document.getElementById("autoPayload").value
-      });
-      await loadAll();
+      try {
+        const name = document.getElementById("autoName").value.trim();
+        const endpoint = document.getElementById("autoEndpoint").value.trim();
+
+        if (name.length < 2) throw new Error("Name must be at least 2 characters");
+        if (endpoint.length < 8) throw new Error("Endpoint must be at least 8 characters");
+
+        await api("/api/automations", "POST", {
+          client_id: Number(document.getElementById("autoClientId").value),
+          name: name,
+          channel: document.getElementById("autoChannel").value,
+          status: document.getElementById("autoStatus").value,
+          run_endpoint: endpoint,
+          http_method: document.getElementById("autoMethod").value,
+          payload_template: document.getElementById("autoPayload").value
+        });
+        await loadAll();
+        showNotice("Automation created.");
+      } catch (e) {
+        showNotice("Create automation failed: " + e.message, true);
+      }
     }
 
     async function runAutomation(id) {
-      await api(`/api/automations/${id}/run`, "POST", {});
-      await loadAll();
-      showTab("execTab");
+      try {
+        await api(`/api/automations/${id}/run`, "POST", {});
+        await loadAll();
+        showTab("execTab");
+        showNotice("Automation executed.");
+      } catch (e) {
+        showNotice("Execution failed: " + e.message, true);
+      }
     }
 
     async function loadAll() {
-      await Promise.all([loadSummary(), loadClients(), loadAutomations(), loadExecutions()]);
+      try {
+        await Promise.all([loadSummary(), loadClients(), loadAutomations(), loadExecutions()]);
+      } catch (e) {
+        showNotice("Refresh failed: " + e.message, true);
+      }
     }
+
+    const validTenant = (value) => /^[a-zA-Z0-9][a-zA-Z0-9_-]{1,79}$/.test(value);
+
+    const syncTenantUi = () => {
+      document.getElementById("tenantLabel").textContent = tenant;
+      document.getElementById("tenantRuntime").value = tenant;
+      document.getElementById("tenantLogin").value = tenant;
+    };
+
+    const switchTenant = async () => {
+      const nextTenant = document.getElementById("tenantRuntime").value.trim();
+      if (!validTenant(nextTenant)) {
+        showNotice("Tenant invalido. Usa letras, numeros, _ o -.", true);
+        return;
+      }
+      tenant = nextTenant;
+      localStorage.setItem("operatorTenant", tenant);
+      syncTenantUi();
+      await loadAll();
+      showNotice("Tenant cambiado a " + tenant);
+    };
+
+    syncTenantUi();
   </script>
 </body>
-</html>
 
+</html>

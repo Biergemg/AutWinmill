@@ -13,9 +13,13 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-# Verificar que Docker Compose esté instalado
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose no está instalado. Por favor instala Docker Compose primero."
+# Resolver comando compose (plugin o binario legacy)
+if docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="docker compose"
+elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE_CMD="docker-compose"
+else
+    echo "Docker Compose no esta instalado. Instala docker-compose-plugin."
     exit 1
 fi
 
@@ -60,7 +64,7 @@ echo ""
 
 # Detener contenedores existentes
 echo "🛑 Deteniendo contenedores existentes..."
-docker-compose -f docker-compose-cyn.yml down --remove-orphans 2>/dev/null || true
+${COMPOSE_CMD} -f docker-compose-cyn.yml down --remove-orphans 2>/dev/null || true
 
 # Cargar variables de entorno en orden: Sistema → Cliente → Desarrollador
 echo "📦 Cargando configuraciones..."
@@ -72,9 +76,9 @@ ENV_FILES=""
 # Construir e iniciar servicios
 echo "🏗️  Construyendo e iniciando servicios..."
 if [ -n "$ENV_FILES" ]; then
-    docker-compose $ENV_FILES -f docker-compose-cyn.yml up -d
+    ${COMPOSE_CMD} $ENV_FILES -f docker-compose-cyn.yml up -d
 else
-    docker-compose -f docker-compose-cyn.yml up -d
+    ${COMPOSE_CMD} -f docker-compose-cyn.yml up -d
 fi
 
 # Esperar a que los servicios estén listos
@@ -83,7 +87,7 @@ sleep 30
 
 # Verificar estado
 echo "🔍 Verificando estado de los servicios..."
-docker-compose -f docker-compose-cyn.yml ps
+${COMPOSE_CMD} -f docker-compose-cyn.yml ps
 
 echo ""
 echo "✅ Ecosistema Cyn iniciado exitosamente!"
@@ -99,7 +103,7 @@ echo "   👤 CLIENTE (Cyn): Configurar .env.client con credenciales reales"
 echo "   🛠️  DESARROLLADOR (Tú): Configurar .env.developer con tus datos"
 echo "   ⚙️  SISTEMA: Configuración técnica automática"
 echo ""
-echo "🛑 Para detener: docker-compose -f docker-compose-cyn.yml down"
+echo "🛑 Para detener: ${COMPOSE_CMD} -f docker-compose-cyn.yml down"
 echo "🔄 Para reiniciar: ./start-cyn-ecosystem.sh"
 echo ""
 echo "❓ Dudas sobre credenciales? Revisa README-CREDENTIALS.md"

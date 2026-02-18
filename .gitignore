@@ -44,3 +44,5 @@ credentials.yml
 tmp/
 temp/
 .benchmarks/
+apps/operator_console/data/
+ops/backups/

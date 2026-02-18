@@ -8,7 +8,10 @@ set -euo pipefail
 #   ./scripts/deploy.sh saas
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-OPS_DIR="${ROOT_DIR}/aut_windmill/ops"
+OPS_DIR="${ROOT_DIR}/ops"
+if [ ! -d "${OPS_DIR}" ] && [ -d "${ROOT_DIR}/aut_windmill/ops" ]; then
+  OPS_DIR="${ROOT_DIR}/aut_windmill/ops"
+fi
 TARGET="${1:-base}"
 
 case "${TARGET}" in

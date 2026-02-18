@@ -1,0 +1,58 @@
+name: Performance & Capacity Suite
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_type:
+        description: 'Type of test to run'
+        required: true
+        default: 'load-test'
+        type: choice
+        options:
+        - load-test
+        - stress-test
+        - soak-test
+        - all
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        pip install locust pytest pandas requests
+
+    - name: Create results directory
+      run: mkdir -p ops/benchmarks/results
+
+    - name: Run Load Test
+      if: ${{ github.event.inputs.test_type == 'load-test' || github.event.inputs.test_type == 'all' }}
+      run: make load-test
+      env:
+        WM_TOKEN: ${{ secrets.WM_TOKEN }}
+        WM_WORKSPACE: ${{ secrets.WM_WORKSPACE }}
+
+    - name: Run Stress Test
+      if: ${{ github.event.inputs.test_type == 'stress-test' || github.event.inputs.test_type == 'all' }}
+      run: make stress-test
+      env:
+        WM_TOKEN: ${{ secrets.WM_TOKEN }}
+
+    - name: Run Soak Test
+      if: ${{ github.event.inputs.test_type == 'soak-test' || github.event.inputs.test_type == 'all' }}
+      run: make soak-test
+      env:
+        WM_TOKEN: ${{ secrets.WM_TOKEN }}
+
+    - name: Upload Results
+      uses: actions/upload-artifact@v3
+      with:
+        name: benchmark-results
+        path: ops/benchmarks/results/

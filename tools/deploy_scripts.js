@@ -1,80 +1,97 @@
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
+const fs = require("fs");
+const path = require("path");
+const yaml = require("js-yaml");
 
-const TOKEN = 'TrAPVETlPnXUeaFkGpgj9L0yoq81F2h7';
-const BASE_URL = 'http://localhost:8000/api';
-const WORKSPACE = 'admins';
+const TOKEN = process.env.WM_TOKEN || "";
+const BASE_URL = (process.env.WM_BASE_URL || "http://localhost:8000/api").replace(/\/$/, "");
+const WORKSPACE = process.env.WM_WORKSPACE || "admins";
+const SCRIPT_ROOT = process.env.WM_SCRIPTS_ROOT || path.join(__dirname, "..", "f", "einstein_kids");
+const F_ROOT = path.join(__dirname, "..", "f");
 
-async function deployScript(filePath, metadataPath) {
-    try {
-        const code = fs.readFileSync(filePath, 'utf8');
-        const metadataRaw = fs.readFileSync(metadataPath, 'utf8');
-        const metadata = yaml.load(metadataRaw);
+function requireEnv() {
+  if (!TOKEN) {
+    throw new Error("Missing WM_TOKEN. Export WM_TOKEN before running deploy_scripts.js");
+  }
+}
 
-        const relativePath = filePath.replace(/\\/g, '/').split('f/')[1].replace('.py', '');
-        const scriptPath = `u/admin/${relativePath}`;
+function normalizeScriptPath(filePath) {
+  const rel = path.relative(F_ROOT, filePath).replace(/\\/g, "/");
+  if (rel.startsWith("..")) {
+    throw new Error(`Script path outside f/: ${filePath}`);
+  }
+  return `u/admin/${rel.replace(/\.py$/, "")}`;
+}
 
-        console.log(`Deploying ${scriptPath}...`);
+async function upsertScript(filePath, metadataPath) {
+  const code = fs.readFileSync(filePath, "utf8");
+  const metadataRaw = fs.readFileSync(metadataPath, "utf8");
+  const metadata = yaml.load(metadataRaw) || {};
+  const scriptPath = normalizeScriptPath(filePath);
 
-        const payload = {
-            path: scriptPath,
-            content: code,
-            language: 'python3',
-            summary: metadata.summary || path.basename(filePath),
-            description: metadata.description || '',
-            schema: metadata.schema || {},
-            kind: 'script'
-        };
+  const payload = {
+    path: scriptPath,
+    content: code,
+    language: "python3",
+    summary: metadata.summary || path.basename(filePath),
+    description: metadata.description || "",
+    schema: metadata.schema || {},
+    kind: "script",
+  };
 
-        const response = await fetch(`${BASE_URL}/w/${WORKSPACE}/scripts/create`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${TOKEN}`
-            },
-            body: JSON.stringify(payload)
-        });
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${TOKEN}`,
+  };
 
-        if (response.ok || response.status === 201) {
-            console.log(`✅ Success: ${scriptPath}`);
-        } else if (response.status === 400) {
-            // Already exists? Let's try update if it's the right error
-            const text = await response.text();
-            if (text.includes('already exists')) {
-                console.log(`ℹ️ ${scriptPath} already exists, attempting update... (needs different endpoint)`);
-                // For now just skip or provide update logic if needed
-            } else {
-                console.log(`❌ Error: ${scriptPath} - ${response.status} ${text}`);
-            }
-        } else {
-            const text = await response.text();
-            console.log(`❌ Error: ${scriptPath} - ${response.status} ${text}`);
-        }
-    } catch (err) {
-        console.error(`Error processing ${filePath}: ${err.message}`);
+  let response = await fetch(`${BASE_URL}/w/${WORKSPACE}/scripts/create`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok && response.status === 400) {
+    const text = await response.text();
+    if (text.toLowerCase().includes("already exists")) {
+      response = await fetch(`${BASE_URL}/w/${WORKSPACE}/scripts/update/${encodeURIComponent(scriptPath)}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+    } else {
+      throw new Error(`Create failed ${scriptPath}: ${response.status} ${text}`);
     }
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Upsert failed ${scriptPath}: ${response.status} ${text}`);
+  }
+  console.log(`OK ${scriptPath}`);
 }
 
 async function main() {
-    const root = path.join(__dirname, 'f', 'einstein_kids');
-    const folders = ['shared', 'moms', 'therapists'];
-
-    for (const folder of folders) {
-        const dir = path.join(root, folder);
-        if (!fs.existsSync(dir)) continue;
-
-        const files = fs.readdirSync(dir);
-        for (const file of files) {
-            if (file.endsWith('.py')) {
-                const filePath = path.join(dir, file);
-                const metadataPath = filePath.replace('.py', '.script.yaml');
-                if (fs.existsSync(metadataPath)) {
-                    await deployScript(filePath, metadataPath);
-                }
-            }
-        }
+  requireEnv();
+  const folders = ["shared", "moms", "therapists"];
+  for (const folder of folders) {
+    const dir = path.join(SCRIPT_ROOT, folder);
+    if (!fs.existsSync(dir)) {
+      continue;
     }
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.endsWith(".py")) {
+        continue;
+      }
+      const filePath = path.join(dir, file);
+      const metadataPath = filePath.replace(".py", ".script.yaml");
+      if (!fs.existsSync(metadataPath)) {
+        continue;
+      }
+      await upsertScript(filePath, metadataPath);
+    }
+  }
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err.message);
+  process.exit(1);
+});

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):
@@ -25,10 +25,10 @@ class ClientCreate(BaseModel):
 
 class ClientOut(ClientCreate):
     id: int
+    tenant_id: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AutomationCreate(BaseModel):
@@ -43,15 +43,16 @@ class AutomationCreate(BaseModel):
 
 class AutomationOut(AutomationCreate):
     id: int
+    tenant_id: str
     created_at: datetime
     last_run_at: datetime | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ExecutionOut(BaseModel):
     id: int
+    tenant_id: str
     client_id: int
     automation_id: int
     status: str
@@ -60,8 +61,7 @@ class ExecutionOut(BaseModel):
     duration_ms: int | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RunRequest(BaseModel):
@@ -73,4 +73,3 @@ class SummaryOut(BaseModel):
     automations: int
     executions_24h: int
     success_24h: int
-

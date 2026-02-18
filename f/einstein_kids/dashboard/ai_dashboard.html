@@ -1,49 +1,57 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Einstein Kids - Dashboard Cyn con Agente AI</title>
+    <meta name="description"
+        content="Panel de control avanzado con Agente AI para Einstein Kids. Gestión inteligente de leads y escalaciones." />
+    <meta property="og:title" content="Einstein Kids - AI Dashboard" />
+    <meta property="og:description" content="Dashboard potenciado por IA para gestión de Einstein Kids." />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Einstein Kids AI" />
+    <meta property="og:locale" content="es_MX" />
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
         }
-        
+
         .dashboard {
             max-width: 1400px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .header {
             background: white;
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
-        
+
         .header h1 {
             color: #667eea;
             font-size: 2.5em;
             margin-bottom: 10px;
         }
-        
+
         .header .subtitle {
             color: #666;
             font-size: 1.2em;
         }
-        
+
         .ai-status {
             display: inline-block;
             background: #00b894;
@@ -53,30 +61,30 @@
             font-size: 0.9em;
             margin-top: 10px;
         }
-        
+
         .ai-status.offline {
             background: #d63031;
         }
-        
+
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 30px;
         }
-        
+
         .metric-card {
             background: white;
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
         }
-        
+
         .metric-card:hover {
             transform: translateY(-5px);
         }
-        
+
         .metric-card .title {
             font-size: 1.1em;
             color: #666;
@@ -84,64 +92,64 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        
+
         .metric-card .value {
             font-size: 2.5em;
             font-weight: bold;
             color: #667eea;
             margin-bottom: 5px;
         }
-        
+
         .metric-card .subtitle {
             font-size: 0.9em;
             color: #999;
         }
-        
+
         .section {
             background: white;
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
         }
-        
+
         .section h2 {
             color: #667eea;
             margin-bottom: 20px;
             font-size: 1.8em;
         }
-        
+
         .ai-conversation {
             background: #f8f9fa;
             border-radius: 10px;
             padding: 20px;
             margin: 10px 0;
         }
-        
+
         .message {
             margin: 10px 0;
             padding: 10px 15px;
             border-radius: 15px;
             max-width: 80%;
         }
-        
+
         .message.inbound {
             background: #e3f2fd;
             margin-left: auto;
             text-align: right;
         }
-        
+
         .message.outbound {
             background: #f1f8e9;
             margin-right: auto;
         }
-        
+
         .message-meta {
             font-size: 0.8em;
             color: #666;
             margin-top: 5px;
         }
-        
+
         .ai-confidence {
             display: inline-block;
             padding: 2px 8px;
@@ -149,22 +157,22 @@
             font-size: 0.7em;
             font-weight: bold;
         }
-        
+
         .confidence-high {
             background: #00b894;
             color: white;
         }
-        
+
         .confidence-medium {
             background: #fdcb6e;
             color: #333;
         }
-        
+
         .confidence-low {
             background: #d63031;
             color: white;
         }
-        
+
         .escalation-banner {
             background: #ffeaa7;
             border: 2px solid #fdcb6e;
@@ -173,78 +181,79 @@
             margin: 10px 0;
             color: #333;
         }
-        
+
         .escalation-banner.critical {
             background: #fab1a0;
             border-color: #e17055;
         }
-        
+
         .table-container {
             overflow-x: auto;
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
         }
-        
-        th, td {
+
+        th,
+        td {
             padding: 12px;
             text-align: left;
             border-bottom: 1px solid #eee;
         }
-        
+
         th {
             background: #f8f9fa;
             font-weight: 600;
             color: #667eea;
         }
-        
+
         .status-badge {
             padding: 4px 8px;
             border-radius: 20px;
             font-size: 0.8em;
             font-weight: 600;
         }
-        
+
         .status-hot {
             background: #ffeaa7;
             color: #d63031;
         }
-        
+
         .status-new {
             background: #74b9ff;
             color: white;
         }
-        
+
         .status-customer {
             background: #00b894;
             color: white;
         }
-        
+
         .status-claimed {
             background: #fdcb6e;
             color: #e17055;
         }
-        
+
         .status-ai {
             background: #a29bfe;
             color: white;
         }
-        
+
         .status-human {
             background: #fd79a8;
             color: white;
         }
-        
+
         .action-buttons {
             display: flex;
             gap: 10px;
             margin-top: 20px;
             flex-wrap: wrap;
         }
-        
+
         .btn {
             padding: 10px 20px;
             border: none;
@@ -255,53 +264,53 @@
             text-decoration: none;
             display: inline-block;
         }
-        
+
         .btn-primary {
             background: #667eea;
             color: white;
         }
-        
+
         .btn-primary:hover {
             background: #5a67d8;
             transform: translateY(-2px);
         }
-        
+
         .btn-success {
             background: #00b894;
             color: white;
         }
-        
+
         .btn-success:hover {
             background: #00a085;
             transform: translateY(-2px);
         }
-        
+
         .btn-danger {
             background: #d63031;
             color: white;
         }
-        
+
         .btn-danger:hover {
             background: #c0392b;
             transform: translateY(-2px);
         }
-        
+
         .btn-ai {
             background: #a29bfe;
             color: white;
         }
-        
+
         .btn-ai:hover {
             background: #6c5ce7;
             transform: translateY(-2px);
         }
-        
+
         .loading {
             text-align: center;
             padding: 50px;
             color: #667eea;
         }
-        
+
         .error {
             background: #ffe6e6;
             color: #d63031;
@@ -309,7 +318,7 @@
             border-radius: 10px;
             margin: 20px 0;
         }
-        
+
         .success {
             background: #e6ffe6;
             color: #00b894;
@@ -317,7 +326,7 @@
             border-radius: 10px;
             margin: 20px 0;
         }
-        
+
         .chart-container {
             height: 300px;
             margin: 20px 0;
@@ -329,7 +338,7 @@
             color: #999;
             font-style: italic;
         }
-        
+
         .refresh-indicator {
             position: fixed;
             top: 20px;
@@ -341,14 +350,14 @@
             font-size: 0.9em;
             z-index: 1000;
         }
-        
+
         .ai-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 15px;
             margin: 20px 0;
         }
-        
+
         .ai-stat {
             background: white;
             padding: 15px;
@@ -356,42 +365,43 @@
             text-align: center;
             border: 1px solid #eee;
         }
-        
+
         .ai-stat .number {
             font-size: 1.5em;
             font-weight: bold;
             color: #667eea;
         }
-        
+
         .ai-stat .label {
             font-size: 0.9em;
             color: #666;
             margin-top: 5px;
         }
-        
+
         @media (max-width: 768px) {
             .metrics-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .header h1 {
                 font-size: 2em;
             }
-            
+
             .metric-card .value {
                 font-size: 2em;
             }
-            
+
             .action-buttons {
                 flex-direction: column;
             }
-            
+
             .btn {
                 width: 100%;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="dashboard">
         <!-- Header -->
@@ -413,19 +423,19 @@
                 <div class="value" id="totalLeads">--</div>
                 <div class="subtitle">Hoy: <span id="leadsToday">--</span></div>
             </div>
-            
+
             <div class="metric-card">
                 <div class="title">Ventas Confirmadas</div>
                 <div class="value" id="totalSales">--</div>
                 <div class="subtitle">$<span id="totalRevenue">--</span> MXN</div>
             </div>
-            
+
             <div class="metric-card">
                 <div class="title">Tasa de Conversión</div>
                 <div class="value" id="conversionRate">--</div>
                 <div class="subtitle">Leads → Ventas</div>
             </div>
-            
+
             <div class="metric-card">
                 <div class="title">Agente AI</div>
                 <div class="value" id="aiResponseRate">--</div>
@@ -454,7 +464,7 @@
                     <div class="label">Tasa de Éxito</div>
                 </div>
             </div>
-            
+
             <div class="action-buttons">
                 <button class="btn btn-ai" onclick="trainAI()">🧠 Entrenar Agente</button>
                 <button class="btn btn-primary" onclick="viewAIResponses()">📊 Ver Respuestas AI</button>
@@ -514,7 +524,7 @@
         async function loadDashboard() {
             try {
                 showLoading();
-                
+
                 // Cargar datos principales
                 const response = await fetch('/api/scripts/einstein_kids/dashboard_cyn/run', {
                     method: 'POST',
@@ -523,17 +533,17 @@
                     },
                     body: JSON.stringify({})
                 });
-                
+
                 if (!response.ok) {
                     throw new Error('Error al cargar dashboard');
                 }
-                
+
                 const data = await response.json();
                 dashboardData = data;
-                
+
                 // Cargar datos del agente AI
                 await loadAIData();
-                
+
                 // Actualizar interfaz
                 updateMetrics(data);
                 updateAIStats(aiData);
@@ -541,10 +551,10 @@
                 updateHotLeads(data.hot_leads);
                 updatePendingClaims(data.claims_pendientes);
                 updateRecentEscalations(aiData);
-                
+
                 updateLastUpdate();
                 hideLoading();
-                
+
             } catch (error) {
                 showError('Error al cargar dashboard: ' + error.message);
             }
@@ -561,13 +571,13 @@
                         period: 'today'
                     })
                 });
-                
+
                 if (!response.ok) {
                     throw new Error('Error al cargar datos AI');
                 }
-                
+
                 aiData = await response.json();
-                
+
             } catch (error) {
                 console.error('Error cargando datos AI:', error);
                 aiData = {
@@ -583,12 +593,12 @@
             // Métricas principales
             document.getElementById('totalLeads').textContent = data.resumen_general?.total_leads || '0';
             document.getElementById('leadsToday').textContent = data.daily_report?.leads?.nuevos || '0';
-            
+
             document.getElementById('totalSales').textContent = data.resumen_general?.ventas_confirmadas || '0';
             document.getElementById('totalRevenue').textContent = (data.resumen_general?.monto_total || 0).toLocaleString();
-            
+
             document.getElementById('conversionRate').textContent = (data.resumen_general?.conversion_rate || 0) + '%';
-            
+
             // Métricas del agente AI
             document.getElementById('aiResponseRate').textContent = (aiData.success_rate || 0) + '%';
             document.getElementById('aiResponses').textContent = aiData.total_responses || '0';
@@ -603,12 +613,12 @@
 
         function updateRecentConversations(aiData) {
             const section = document.getElementById('recentConversations');
-            
+
             if (!aiData.recent_conversations || aiData.recent_conversations.length === 0) {
                 section.innerHTML = '<p>No hay conversaciones recientes con el agente AI.</p>';
                 return;
             }
-            
+
             let html = '';
             aiData.recent_conversations.forEach(conv => {
                 html += `
@@ -634,18 +644,18 @@
                     </div>
                 `;
             });
-            
+
             section.innerHTML = html;
         }
 
         function updateHotLeads(hotLeads) {
             const section = document.getElementById('hotLeadsSection');
-            
+
             if (!hotLeads || hotLeads.length === 0) {
                 section.innerHTML = '<p>No hay leads calientes en este momento.</p>';
                 return;
             }
-            
+
             let html = `
                 <div class="table-container">
                     <table>
@@ -662,13 +672,13 @@
                         </thead>
                         <tbody>
             `;
-            
+
             hotLeads.forEach(lead => {
                 const agentType = lead.last_interaction_agent || 'AI';
-                const agentBadge = agentType === 'AI' ? 
-                    '<span class="status-badge status-ai">AI</span>' : 
+                const agentBadge = agentType === 'AI' ?
+                    '<span class="status-badge status-ai">AI</span>' :
                     '<span class="status-badge status-human">Humano</span>';
-                
+
                 html += `
                     <tr>
                         <td>${lead.nombre}</td>
@@ -684,19 +694,19 @@
                     </tr>
                 `;
             });
-            
+
             html += '</tbody></table></div>';
             section.innerHTML = html;
         }
 
         function updatePendingClaims(claims) {
             const section = document.getElementById('pendingClaimsSection');
-            
+
             if (!claims || claims.length === 0) {
                 section.innerHTML = '<p>No hay claims pendientes.</p>';
                 return;
             }
-            
+
             let html = `
                 <div class="table-container">
                     <table>
@@ -712,13 +722,13 @@
                         </thead>
                         <tbody>
             `;
-            
+
             claims.forEach(claim => {
                 const agentType = claim.ai_processed ? 'AI' : 'Humano';
-                const agentBadge = agentType === 'AI' ? 
-                    '<span class="status-badge status-ai">AI</span>' : 
+                const agentBadge = agentType === 'AI' ?
+                    '<span class="status-badge status-ai">AI</span>' :
                     '<span class="status-badge status-human">Humano</span>';
-                
+
                 html += `
                     <tr>
                         <td>${claim.nombre}</td>
@@ -733,23 +743,23 @@
                     </tr>
                 `;
             });
-            
+
             html += '</tbody></table></div>';
             section.innerHTML = html;
         }
 
         function updateRecentEscalations(escalations) {
             const section = document.getElementById('recentEscalations');
-            
+
             if (!escalations || escalations.length === 0) {
                 section.innerHTML = '<p>No hay escalaciones recientes.</p>';
                 return;
             }
-            
+
             let html = '';
             escalations.forEach(esc => {
                 const priorityClass = esc.priority === 'critical' ? 'critical' : '';
-                
+
                 html += `
                     <div class="escalation-banner ${priorityClass}">
                         <h4>🚨 Escalación ${esc.priority.toUpperCase()}</h4>
@@ -764,7 +774,7 @@
                     </div>
                 `;
             });
-            
+
             section.innerHTML = html;
         }
 
@@ -857,7 +867,7 @@
             errorDiv.className = 'error';
             errorDiv.textContent = message;
             document.querySelector('.dashboard').insertBefore(errorDiv, document.querySelector('.metrics-grid'));
-            
+
             setTimeout(() => {
                 errorDiv.remove();
             }, 5000);
@@ -874,4 +884,5 @@
         document.addEventListener('DOMContentLoaded', loadDashboard);
     </script>
 </body>
+
 </html>

@@ -28,6 +28,7 @@ UI propia para operar clientes y automatizaciones usando Windmill/API como motor
 
 - Codigo: `apps/operator_console/`
 - Compose: `ops/deploy/operator-console.compose.yml`
+- Compose VPS TLS (edge dedicado): `ops/deploy/operator-console.vps.compose.yml`
 - Env ejemplo: `ops/deploy/.env.operator-console.example`
 
 Despliegue rapido:
@@ -39,6 +40,36 @@ Despliegue rapido:
    `docker compose --env-file ops/deploy/.env -f ops/deploy/operator-console.compose.yml up -d --build`
 4. Abrir:
    `http://<tu-servidor>:8088`
+
+Checklist lanzamiento real:
+
+1. Define `OPERATOR_ENV=production`.
+2. Cambia `OPERATOR_ADMIN_PASSWORD` y `OPERATOR_JWT_SECRET` por valores fuertes.
+3. Usa `OPERATOR_DB_URL` contra PostgreSQL administrado (evita SQLite en VPS).
+4. En la UI entra con un tenant (ejemplo `cyn`, `acme`, `clinic_01`).
+5. Cada request queda aislado por tenant via header `X-Operator-Tenant`.
+6. Configura `OPERATOR_ALLOWED_ENDPOINT_HOSTS` y `OPERATOR_TOKEN_TARGET_HOSTS`.
+
+## VPS production checklist
+
+- Runbook completo: `ops/deploy/VPS_GO_LIVE.md`
+- Variables Cyn VPS: `ops/deploy/.env.cyn.vps.example`
+- Variables Operator VPS: `ops/deploy/.env.operator-console.vps.example`
+- Backup PostgreSQL: `ops/deploy/backup_pg.sh`
+- Restore PostgreSQL: `ops/deploy/restore_pg.sh`
+- Preflight de secretos VPS: `ops/deploy/preflight_vps.sh`
+- CI/CD deploy: `.github/workflows/deploy_vps.yml`
+
+## Script sync to Windmill
+
+El script `tools/deploy_scripts.js` ya no usa tokens hardcodeados.
+
+Variables requeridas:
+
+- `WM_TOKEN`
+- `WM_BASE_URL` (ejemplo: `https://windmill.tudominio.com/api`)
+- `WM_WORKSPACE`
+- opcional `WM_SCRIPTS_ROOT`
 
 ## CI
 
