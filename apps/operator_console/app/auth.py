@@ -58,8 +58,8 @@ def require_user(credentials: HTTPAuthorizationCredentials = Depends(security)) 
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALG])
         return str(payload["sub"])
-    except Exception as exc:
+    except jwt.PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {exc}",
-        ) from exc
+            detail="Could not validate credentials",
+        )

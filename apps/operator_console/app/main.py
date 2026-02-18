@@ -1,19 +1,24 @@
-from __future__ import annotations
-
 import json
 import os
 import re
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Awaitable, Callable, cast
 from urllib.parse import urlparse
 
 import requests
-from fastapi import Depends, FastAPI, Header, HTTPException
+import prometheus_client
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, text
 from sqlalchemy.orm import Session
+from starlette.middleware.base import RequestResponseEndpoint
 
 from .auth import assert_secure_runtime, create_token, require_user, verify_admin
 from .db import bootstrap_schema, get_db
@@ -38,6 +43,40 @@ STATIC_DIR = BASE_DIR / "static"
 
 app = FastAPI(title="AutWinmill Operator Console", version="0.1.0")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+# Rate Limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+rate_limit_handler = cast(
+    Callable[[Request, Exception], Response | Awaitable[Response]],
+    _rate_limit_exceeded_handler,
+)
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+
+# CORS
+origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Security Headers
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next: RequestResponseEndpoint) -> Response:
+    response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    return response
+
+# Metrics Endpoint
+@app.get("/metrics")
+def metrics() -> Response:
+    return Response(prometheus_client.generate_latest(), media_type=prometheus_client.CONTENT_TYPE_LATEST)
 TENANT_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{1,79}$")
 ALLOWED_HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
 
@@ -95,7 +134,8 @@ def root() -> FileResponse:
 
 
 @app.post("/api/auth/login", response_model=TokenResponse)
-def login(payload: LoginRequest) -> TokenResponse:
+@limiter.limit("5/minute")
+def login(request: Request, payload: LoginRequest) -> TokenResponse:
     if not verify_admin(payload.username, payload.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return TokenResponse(access_token=create_token(payload.username))
