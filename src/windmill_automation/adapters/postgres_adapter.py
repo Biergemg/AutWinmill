@@ -1,84 +1,96 @@
+from __future__ import annotations
+
 import json
 import logging
-import subprocess
-import shlex
-from typing import List, Dict, Any, Optional
-from ..ports.persistence import PersistencePort, AuditRecord
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from typing import Any
+
+import psycopg2
+from psycopg2.extras import Json, RealDictCursor
+
+from ..ports.persistence import AuditRecord, PersistencePort
 
 logger = logging.getLogger(__name__)
 
 
-def log_json(level: str, message: str, extra: Dict[str, Any] | None = None) -> None:
-    """Local JSON-like fallback logger to avoid cross-package runtime imports."""
-    payload: Dict[str, Any] = {"message": message}
-    if extra:
-        payload["extra"] = extra
-    log_fn = getattr(logger, level.lower(), logger.info)
-    log_fn(json.dumps(payload, ensure_ascii=False))
-
 class DockerPostgresAdapter(PersistencePort):
-    """
-    Adaptador que interactúa con PostgreSQL a través de Docker CLI.
-    Esta es una implementación de transición hasta tener un driver nativo configurado.
-    """
-    
-    def __init__(self, container_name: str = "aut_windmill_postgres", db_user: str = "windmill", db_name: str = "windmill"):
-        self.container_name = container_name
-        self.db_user = db_user
-        self.db_name = db_name
+    """Compatibility adapter kept for legacy call sites.
 
-    def _run_psql_command(self, sql: str) -> str:
-        """Ejecuta un comando SQL vía docker exec y retorna stdout"""
-        cmd = [
-            "docker", "exec", "-i", 
-            self.container_name, 
-            "psql", "-U", self.db_user, "-d", self.db_name,
-            "-t", "-A",  # Tuples only, unaligned (easier parsing)
-            "-c", sql
-        ]
-        
+    Despite the historical name, this version uses direct DB connections with
+    parameterized SQL to avoid shell injection risks.
+    """
+
+    def __init__(
+        self,
+        container_name: str = "aut_windmill_postgres",
+        db_user: str | None = None,
+        db_name: str | None = None,
+        db_password: str | None = None,
+        db_host: str | None = None,
+        db_port: int | None = None,
+        dsn: str | None = None,
+    ):
+        self.container_name = container_name  # kept for backward compatibility
+        self.db_user = db_user or os.getenv("POSTGRES_USER", "windmill")
+        self.db_name = db_name or os.getenv("POSTGRES_DB", "windmill")
+        self.db_password = db_password or os.getenv("POSTGRES_PASSWORD", "")
+        self.db_host = db_host or os.getenv("PGHOST", "localhost")
+        self.db_port = db_port or int(os.getenv("PGPORT", "5432"))
+        self.dsn = dsn or os.getenv("DATABASE_URL")
+
+    @contextmanager
+    def _conn(self) -> Iterator:
+        conn = None
         try:
-            result = subprocess.run(
-                cmd, 
-                capture_output=True, 
-                text=True, 
-                check=True
-            )
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            msg = f"Error ejecutando SQL en docker: {e.stderr}"
-            log_json("error", msg, extra={"sql": sql, "exit_code": e.returncode})
-            raise RuntimeError(msg)
+            if self.dsn:
+                conn = psycopg2.connect(self.dsn)
+            else:
+                conn = psycopg2.connect(
+                    host=self.db_host,
+                    port=self.db_port,
+                    user=self.db_user,
+                    password=self.db_password,
+                    dbname=self.db_name,
+                )
+            yield conn
+        except Exception as exc:  # noqa: BLE001
+            msg = f"Error ejecutando SQL: {exc}"
+            logger.error(json.dumps({"message": msg}, ensure_ascii=False))
+            raise RuntimeError(msg) from exc
+        finally:
+            if conn is not None:
+                conn.close()
 
     def record_audit_log(self, record: AuditRecord) -> None:
-        # Serializar details a JSON
-        details_json = json.dumps(record.details).replace("'", "''") # Simple SQL escape
-        
-        # Usamos la función record_platform_action si aplica, o insert directo
-        # Aquí usaremos insert directo para ser genericos o la funcion existente record_platform_action
-        
-        # Construir query segura (relativamente, asumiendo inputs controlados por ahora)
-        sql = f"""
+        sql = """
         INSERT INTO audit_log (actor, action, details, trace_id, workflow_id, event_id)
-        VALUES ('{record.actor}', '{record.action}', '{details_json}'::jsonb, 
-                {f"'{record.trace_id}'" if record.trace_id else "NULL"},
-                {f"'{record.workflow_id}'" if record.workflow_id else "NULL"},
-                {f"'{record.event_id}'" if record.event_id else "NULL"}
-        );
+        VALUES (%s, %s, %s, %s, %s, %s)
         """
-        self._run_psql_command(sql)
+        with self._conn() as conn, conn.cursor() as cur:
+            cur.execute(
+                sql,
+                (
+                    record.actor,
+                    record.action,
+                    Json(record.details),
+                    record.trace_id,
+                    record.workflow_id,
+                    record.event_id,
+                ),
+            )
+            conn.commit()
 
-    def get_audit_logs(self, limit: int = 10) -> List[Dict[str, Any]]:
-        # Usamos json_agg para recuperar JSON directamente desde postgres
-        sql = f"""
-        SELECT json_agg(t) FROM (
-            SELECT * FROM audit_log ORDER BY ts DESC LIMIT {limit}
-        ) t;
+    def get_audit_logs(self, limit: int = 10) -> list[dict[str, Any]]:
+        safe_limit = max(1, min(limit, 500))
+        sql = """
+        SELECT actor, action, details, trace_id, workflow_id, event_id, ts
+        FROM audit_log
+        ORDER BY ts DESC
+        LIMIT %s
         """
-        output = self._run_psql_command(sql)
-        if not output:
-            return []
-        try:
-            return json.loads(output)
-        except json.JSONDecodeError:
-            return []
+        with self._conn() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, (safe_limit,))
+            rows = cur.fetchall()
+            return [dict(row) for row in rows]

@@ -2,12 +2,14 @@ import json
 import os
 import re
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Awaitable, Callable, cast
+from typing import AsyncIterator, Awaitable, Callable, cast
 from urllib.parse import urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
 import prometheus_client
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -21,7 +23,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.base import RequestResponseEndpoint
 
 from .auth import assert_secure_runtime, create_token, require_user, verify_admin
-from .db import bootstrap_schema, get_db
+from .db import bootstrap_schema, close_engine, get_db
 from .models import Automation, Client, Execution
 from .schemas import (
     AutomationCreate,
@@ -41,7 +43,38 @@ assert_secure_runtime()
 BASE_DIR = Path(__file__).resolve().parents[1]
 STATIC_DIR = BASE_DIR / "static"
 
-app = FastAPI(title="AutWinmill Operator Console", version="0.1.0")
+
+def _run_timeout_seconds() -> int:
+    try:
+        value = int(os.getenv("OPERATOR_RUN_TIMEOUT_SECONDS", "30"))
+    except ValueError:
+        value = 30
+    return min(max(value, 3), 120)
+
+
+def _http_pool_size() -> int:
+    try:
+        value = int(os.getenv("OPERATOR_HTTP_POOL_SIZE", "20"))
+    except ValueError:
+        value = 20
+    return min(max(value, 5), 200)
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    session = requests.Session()
+    adapter = HTTPAdapter(pool_connections=_http_pool_size(), pool_maxsize=_http_pool_size())
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    _.state.http_session = session
+    try:
+        yield
+    finally:
+        session.close()
+        close_engine()
+
+
+app = FastAPI(title="AutWinmill Operator Console", version="0.1.0", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 # Rate Limiter
@@ -54,13 +87,19 @@ rate_limit_handler = cast(
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 # CORS
-origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+origins = [item.strip() for item in os.getenv("OPERATOR_ALLOWED_ORIGINS", "").split(",") if item.strip()]
+if not origins:
+    origins = [item.strip() for item in os.getenv("ALLOWED_ORIGINS", "").split(",") if item.strip()]
+if not origins:
+    origins = ["*"]
+if os.getenv("OPERATOR_ENV", "dev").lower() in {"prod", "production"} and "*" in origins:
+    raise RuntimeError("OPERATOR_ALLOWED_ORIGINS cannot be '*' in production")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_credentials=("*" not in origins),
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type", "X-Operator-Tenant"],
 )
 
 # Security Headers
@@ -71,6 +110,8 @@ async def add_security_headers(request: Request, call_next: RequestResponseEndpo
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Content-Security-Policy"] = "default-src 'self'"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
 
 # Metrics Endpoint
@@ -282,6 +323,7 @@ def _headers(target_host: str) -> dict[str, str]:
 def run_automation(
     automation_id: int,
     payload: RunRequest,
+    request: Request,
     _: str = Depends(require_user),
     tenant_id: str = Depends(require_tenant),
     db: Session = Depends(get_db),
@@ -304,12 +346,13 @@ def run_automation(
     status = "error"
     response_body = ""
     try:
-        response = requests.request(
+        http_session = getattr(request.app.state, "http_session", requests)
+        response = http_session.request(
             automation.http_method.upper(),
             automation.run_endpoint,
             headers=_headers(target_host),
             json=body,
-            timeout=30,
+            timeout=_run_timeout_seconds(),
         )
         code = response.status_code
         response_body = response.text[:5000]

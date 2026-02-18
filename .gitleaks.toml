@@ -1,6 +1,6 @@
 [allowlist]
   description = "Allowed patterns"
   paths = [
-    "aut_windmill/ops/docker-compose.yml",
-    "aut_windmill/ops/db/migrations",
+    "ops/docker-compose.yml",
+    "ops/db/migrations",
   ]

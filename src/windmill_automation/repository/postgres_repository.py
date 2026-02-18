@@ -1,21 +1,43 @@
-from typing import Dict, Any
+from __future__ import annotations
 
-from src.windmill_automation.adapters.docker import DockerAdapter
+import os
+from dataclasses import dataclass
+from typing import Any
+
+import psycopg2
 
 
+@dataclass
 class PostgresRepository:
-    def __init__(self, adapter: DockerAdapter | None = None) -> None:
-        self.adapter = adapter or DockerAdapter()
+    dsn: str | None = None
 
-    def insert_event(self, event: Dict[str, Any]) -> bool:
-        sql = (
-            "INSERT INTO events(event_id, trace_id, payload, status) "
-            f"VALUES ('{event['event_id']}', '{event['trace_id']}', '{event['payload']}', '{event['status']}');"
-        )
-        result = self.adapter.run_psql_command(sql)
-        return result.returncode == 0
+    def __post_init__(self) -> None:
+        if not self.dsn:
+            self.dsn = os.getenv("DATABASE_URL")
+        if not self.dsn:
+            raise RuntimeError("DATABASE_URL is required for PostgresRepository")
+
+    def _connect(self):
+        return psycopg2.connect(self.dsn)
+
+    def insert_event(self, event: dict[str, Any]) -> bool:
+        sql = """
+        INSERT INTO events(event_id, trace_id, payload, status)
+        VALUES (%s, %s, %s, %s)
+        """
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute(
+                sql,
+                (
+                    event["event_id"],
+                    event.get("trace_id"),
+                    str(event.get("payload")),
+                    event.get("status"),
+                ),
+            )
+        return True
 
     def update_status(self, event_id: str, status: str) -> bool:
-        sql = f"UPDATE events SET status = '{status}' WHERE event_id = '{event_id}';"
-        result = self.adapter.run_psql_command(sql)
-        return result.returncode == 0
+        with self._connect() as conn, conn.cursor() as cur:
+            cur.execute("UPDATE events SET status = %s WHERE event_id = %s", (status, event_id))
+        return True

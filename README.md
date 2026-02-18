@@ -49,6 +49,7 @@ Checklist lanzamiento real:
 4. En la UI entra con un tenant (ejemplo `cyn`, `acme`, `clinic_01`).
 5. Cada request queda aislado por tenant via header `X-Operator-Tenant`.
 6. Configura `OPERATOR_ALLOWED_ENDPOINT_HOSTS` y `OPERATOR_TOKEN_TARGET_HOSTS`.
+7. En produccion define `OPERATOR_ALLOWED_ORIGINS` sin wildcard y `OPERATOR_DB_URL` obligatorio.
 
 ## VPS production checklist
 
@@ -63,6 +64,7 @@ Checklist lanzamiento real:
 ## Script sync to Windmill
 
 El script `tools/deploy_scripts.js` ya no usa tokens hardcodeados.
+Dependencias Node reproducibles en `package.json` + `package-lock.json`.
 
 Variables requeridas:
 
@@ -70,6 +72,11 @@ Variables requeridas:
 - `WM_BASE_URL` (ejemplo: `https://windmill.tudominio.com/api`)
 - `WM_WORKSPACE`
 - opcional `WM_SCRIPTS_ROOT`
+
+Instalacion y uso:
+
+- `npm ci`
+- `npm run deploy:scripts`
 
 ## CI
 

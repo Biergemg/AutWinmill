@@ -66,11 +66,22 @@ def test_endpoint_allowlist_and_token_scoping(monkeypatch, tmp_path: Path) -> No
 
     auth_seen: list[str | None] = []
 
-    def fake_request(method: str, url: str, headers: dict[str, str], json: dict[str, object], timeout: int):
+    def fake_request(
+        method: str,
+        url: str,
+        headers: dict[str, str],
+        json: dict[str, object],
+        timeout: int,
+        **_: object,
+    ):
         auth_seen.append(headers.get("Authorization"))
         return _FakeResponse()
 
-    monkeypatch.setattr(module.requests, "request", fake_request)
+    http_session = getattr(client.app.state, "http_session", None)
+    if http_session is None:
+        monkeypatch.setattr(module.requests, "request", fake_request)
+    else:
+        monkeypatch.setattr(http_session, "request", fake_request)
 
     wm_auto = client.post(
         "/api/automations",

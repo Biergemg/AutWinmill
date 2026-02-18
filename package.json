@@ -1,0 +1,16 @@
+{
+  "name": "autwinmill-tools",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tooling for Windmill deployment scripts",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "deploy:scripts": "node tools/deploy_scripts.js"
+  },
+  "dependencies": {
+    "js-yaml": "4.1.1"
+  }
+}
+

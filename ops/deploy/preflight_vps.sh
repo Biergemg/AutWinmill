@@ -42,6 +42,7 @@ if [ -f "$OP_ENV" ]; then
   assert_var_safe "$OP_ENV" "OPERATOR_PUBLIC_DOMAIN"
   assert_var_safe "$OP_ENV" "OPERATOR_ADMIN_PASSWORD"
   assert_var_safe "$OP_ENV" "OPERATOR_JWT_SECRET"
+  assert_var_safe "$OP_ENV" "OPERATOR_DB_URL"
   assert_var_safe "$OP_ENV" "OPERATOR_ALLOWED_ENDPOINT_HOSTS"
   assert_var_safe "$OP_ENV" "OPERATOR_TOKEN_TARGET_HOSTS"
 

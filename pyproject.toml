@@ -5,12 +5,20 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "windmill-automation"
 version = "0.1.0"
-description = "Automatizaciones Windmill - arquitectura hexagonal, validación y orquestación"
+description = "Automatizaciones Windmill - arquitectura hexagonal, validacion y orquestacion"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "pydantic>=2.6.0",
+  "pydantic-settings>=2.0.0",
+  "email-validator>=2.2.0",
+  "sqlalchemy>=2.0.0",
+  "psycopg2-binary>=2.9.0",
   "jsonschema>=4.19.0",
+]
+
+[project.optional-dependencies]
+dev = [
   "pytest>=7.4.0",
   "pytest-cov>=4.1.0",
   "hypothesis>=6.88.0",
@@ -55,7 +63,18 @@ exclude = "(ops/|flows/|resources/|contracts/)"
 [tool.pytest.ini_options]
 testpaths = ["tests", "scripts/core"]
 addopts = "--maxfail=1 -q"
+markers = [
+  "integration: requires external services",
+  "manual: manual operational checks",
+  "load: load and stress suites",
+]
 
 [tool.sqlfluff]
 dialect = "postgres"
 exclude_rules = ["L001"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

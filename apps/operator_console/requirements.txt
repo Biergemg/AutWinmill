@@ -8,4 +8,3 @@ python-multipart==0.0.20
 httpx==0.28.1
 slowapi==0.1.9
 prometheus-client==0.20.0
-json-logging==1.5.1

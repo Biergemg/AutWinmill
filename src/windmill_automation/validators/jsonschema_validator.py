@@ -1,4 +1,3 @@
-import json
 from typing import Any, Dict, List, Tuple
 
 from .base import _validate_object, load_json
@@ -7,7 +6,6 @@ from .registry import get_schema_path
 
 def _validate_jsonschema(schema: Dict[str, Any], data: Dict[str, Any]) -> Tuple[bool, List[str]]:
     try:
-        import jsonschema
         from jsonschema import Draft202012Validator
 
         validator = Draft202012Validator(schema)

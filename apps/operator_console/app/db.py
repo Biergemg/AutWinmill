@@ -13,6 +13,8 @@ def _db_url() -> str:
     configured = os.getenv("OPERATOR_DB_URL")
     if configured:
         return configured
+    if os.getenv("OPERATOR_ENV", "dev").lower() in {"prod", "production"}:
+        raise RuntimeError("OPERATOR_DB_URL is required in production")
     default_data_dir = Path(__file__).resolve().parents[1] / "data"
     data_dir = Path(os.getenv("OPERATOR_DATA_DIR", str(default_data_dir)))
     data_dir.mkdir(parents=True, exist_ok=True)
@@ -60,3 +62,8 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+def close_engine() -> None:
+    SessionLocal.close_all()
+    engine.dispose()

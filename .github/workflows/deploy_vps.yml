@@ -93,7 +93,7 @@ jobs:
             fi
 
             if [ "${TARGET}" = "all" ] || [ "${TARGET}" = "operator" ]; then
-              docker compose --env-file ops/deploy/.env.operator-console.vps -f ops/deploy/operator-console.compose.yml up -d --build --remove-orphans
+              docker compose --env-file ops/deploy/.env.operator-console.vps -f ops/deploy/operator-console.vps.compose.yml up -d --build --remove-orphans
             fi
       - name: Deploy skipped (missing secrets)
         if: steps.validate_secrets.outputs.ready != 'true'
