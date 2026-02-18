@@ -42,6 +42,18 @@ if [ -f "$OP_ENV" ]; then
   assert_var_safe "$OP_ENV" "OPERATOR_PUBLIC_DOMAIN"
   assert_var_safe "$OP_ENV" "OPERATOR_ADMIN_PASSWORD"
   assert_var_safe "$OP_ENV" "OPERATOR_JWT_SECRET"
+  assert_var_safe "$OP_ENV" "OPERATOR_ALLOWED_ENDPOINT_HOSTS"
+  assert_var_safe "$OP_ENV" "OPERATOR_TOKEN_TARGET_HOSTS"
+
+  allowed_hosts="$(read_var "$OP_ENV" "OPERATOR_ALLOWED_ENDPOINT_HOSTS" | tr ',' '\n' | tr -d '[:space:]')"
+  token_hosts="$(read_var "$OP_ENV" "OPERATOR_TOKEN_TARGET_HOSTS" | tr ',' '\n' | tr -d '[:space:]')"
+  while IFS= read -r token_host; do
+    [ -z "$token_host" ] && continue
+    if ! echo "$allowed_hosts" | grep -Fxq "$token_host"; then
+      echo "OPERATOR_TOKEN_TARGET_HOSTS must be subset of OPERATOR_ALLOWED_ENDPOINT_HOSTS"
+      exit 1
+    fi
+  done <<< "$token_hosts"
 fi
 
 echo "VPS preflight passed"

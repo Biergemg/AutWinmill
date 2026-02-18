@@ -1,59 +1,64 @@
-# 🚀 Checklist de Despliegue a Producción (Oracle Cloud VPS)
+# Production Deploy Checklist (Oracle Cloud VPS)
 
-Este documento certifica que el código ha pasado la auditoría de seguridad pre-deployment y está listo para producción, sujeto a la ejecución de los siguientes pasos manuales.
+This checklist is the final operator guide before enabling production traffic.
 
-## ✅ Estado del Código: GO
-- **Docker Security:** Aprobado (Usuario `appuser` configurado).
-- **Secret Management:** Aprobado (Fail-fast implementado en `auth.py`).
-- **Network Security:** Aprobado (Headers HSTS/X-Frame-Options inyectados en Caddy).
+## 1) Oracle Cloud firewall
 
-## 📋 Pasos Finales para el Operador
+Allow only:
+- TCP `22` (restricted to your admin IP)
+- TCP `80`
+- TCP `443`
 
-### 1. Configuración en Oracle Cloud (OCI)
-Antes de desplegar, configura el Firewall (Security Lists) en la consola de Oracle:
+Do not expose:
+- `8088`, `8001`, `5433`, `6380`, `9091`
 
-*   **Ingress Rules (Entrada):**
-    *   TCP 22 (SSH): Restringir a tu IP (`TU_IP/32`) o usar VPN.
-    *   TCP 80 (HTTP): Abierto (`0.0.0.0/0`) - Caddy manejará la redirección.
-    *   TCP 443 (HTTPS): Abierto (`0.0.0.0/0`).
-    *   **BLOQUEAR:** TCP 8088 (El puerto de la aplicación no debe ser público).
+## 2) Required env values (operator console)
 
-### 2. Preparación del VPS
-Sube los archivos necesarios al servidor:
-
-```bash
-# Ejemplo usando scp (o usa git pull en el servidor)
-scp -r ops/deploy/operator-console.vps.compose.yml usuario@tu-vps:/opt/winmill/
-scp -r ops/deploy/.env.operator-console.vps.example usuario@tu-vps:/opt/winmill/.env
-```
-
-### 3. Configuración de Variables de Entorno (CRÍTICO)
-En el servidor, edita el archivo `.env`:
-
-```bash
-nano /opt/winmill/.env
-```
-
-Asegúrate de establecer valores reales y seguros para:
-- `OPERATOR_JWT_SECRET` (Mínimo 32 caracteres aleatorios)
-- `OPERATOR_ADMIN_PASSWORD` (Contraseña fuerte)
-- `OPERATOR_PUBLIC_DOMAIN` (Tu dominio, ej: ops.winmill.com)
+Edit your VPS env file and set strong values:
+- `OPERATOR_ADMIN_PASSWORD`
+- `OPERATOR_JWT_SECRET`
 - `OPERATOR_ENV=production`
+- `OPERATOR_PUBLIC_DOMAIN`
+- `OPERATOR_ALLOWED_ENDPOINT_HOSTS`
+- `OPERATOR_TOKEN_TARGET_HOSTS`
 
-### 4. Ejecución
-Inicia los servicios:
+Rule:
+- `OPERATOR_TOKEN_TARGET_HOSTS` must be a subset of `OPERATOR_ALLOWED_ENDPOINT_HOSTS`.
+
+## 3) Port conflict rule (important)
+
+If `cyn` edge is running on `80/443`, do one of these:
+- Use `ops/deploy/operator-console.compose.yml` (localhost only) and route through a shared proxy.
+- Or change `EDGE_HTTP_PORT` / `EDGE_HTTPS_PORT` for operator edge.
+
+Do not run two edge stacks on the same `80/443`.
+
+## 4) Preflight gate
+
+Run before deploy:
 
 ```bash
-cd /opt/winmill
-docker compose -f operator-console.vps.compose.yml up -d --build
+chmod +x ops/deploy/preflight_vps.sh
+/bin/bash ops/deploy/preflight_vps.sh ops/deploy/.env.cyn.vps ops/deploy/.env.operator-console.vps
 ```
 
-### 5. Verificación Post-Deploy
-1.  Visita `https://tu-dominio.com`. Deberías ver el candado verde (SSL).
-2.  Intenta acceder por HTTP; debería redirigir a HTTPS.
-3.  Verifica los headers de seguridad usando `curl -I https://tu-dominio.com`:
-    *   `Strict-Transport-Security` debe estar presente.
-    *   `X-Frame-Options: DENY` debe estar presente.
+## 5) Deploy commands
 
----
-**Firmado:** Senior Security & Infrastructure Architect Agent
+Operator console (localhost mode, recommended when cyn edge already exists):
+
+```bash
+docker compose --env-file ops/deploy/.env.operator-console.vps -f ops/deploy/operator-console.compose.yml up -d --build --remove-orphans
+```
+
+Operator console (dedicated edge mode):
+
+```bash
+docker compose --env-file ops/deploy/.env.operator-console.vps -f ops/deploy/operator-console.vps.compose.yml up -d --build --remove-orphans
+```
+
+## 6) Post-deploy checks
+
+- `docker compose ps` is healthy.
+- `curl -I https://<domain>` returns security headers.
+- login works and tenant isolation works.
+- backup script runs and restore drill is tested.
