@@ -11,7 +11,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 OPERATOR_ENV = os.getenv("OPERATOR_ENV", "production").lower()
 
-if OPERATOR_ENV in ("dev", "development"):
+if OPERATOR_ENV in ("dev", "development", "test"):
     JWT_SECRET = os.getenv("OPERATOR_JWT_SECRET", "dev_secret_only")
     ADMIN_PASSWORD = os.getenv("OPERATOR_ADMIN_PASSWORD", "dev_password_only")
 else:
