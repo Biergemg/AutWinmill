@@ -1,9 +1,20 @@
 import json
+import logging
 import subprocess
 import shlex
 from typing import List, Dict, Any, Optional
 from ..ports.persistence import PersistencePort, AuditRecord
-from scripts.lib.json_logging import log_json
+
+logger = logging.getLogger(__name__)
+
+
+def log_json(level: str, message: str, extra: Dict[str, Any] | None = None) -> None:
+    """Local JSON-like fallback logger to avoid cross-package runtime imports."""
+    payload: Dict[str, Any] = {"message": message}
+    if extra:
+        payload["extra"] = extra
+    log_fn = getattr(logger, level.lower(), logger.info)
+    log_fn(json.dumps(payload, ensure_ascii=False))
 
 class DockerPostgresAdapter(PersistencePort):
     """
