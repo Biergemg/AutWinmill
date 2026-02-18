@@ -1,94 +1,77 @@
 # AutWinmill
 
-Plataforma interna de automatizaciones multi-cliente para vender servicio gestionado.
+Plataforma interna multi-cliente para operar y vender automatizaciones gestionadas.
 
-## Estructura
+## Arquitectura
 
-- `src/`: codigo Python principal (arquitectura base).
-- `flows/`: flujos de orquestacion de automatizaciones.
-- `f/`: implementaciones por cliente y scripts de negocio.
-- `contracts/`: contratos JSON Schema y ejemplos.
-- `ops/`: infraestructura, compose, migraciones, runbooks operativos.
-- `resources/`: configuraciones de ejemplo.
-- `scripts/`: utilidades tecnicas de plataforma.
-- `scripts_yaml/`: versiones YAML de scripts para Windmill.
-- `tests/`: pruebas automatizadas y utilidades manuales.
-- `docs/`: documentacion funcional, tecnica y plan de refactor.
-- `tools/`: CLI y herramientas de soporte local.
+- `src/windmill_automation/domain`: entidades y excepciones de dominio.
+- `src/windmill_automation/application`: servicios de caso de uso.
+- `src/windmill_automation/ports`: contratos (interfaces) para desacoplar infraestructura.
+- `src/windmill_automation/infrastructure`: persistencia y base de datos.
+- `src/windmill_automation/adapters`: integraciones externas.
+- `apps/operator_console`: API/UI para operación diaria multi-tenant.
+- `f/`, `flows/`, `resources/`, `contracts/`: assets operativos por vertical/cliente.
 
-## Inicio rapido
+## Inicio rápido local
 
-1. Configura variables de entorno basadas en `resources/env.example`.
-2. Levanta infraestructura local con los compose de `ops/`.
-3. Ejecuta pruebas y validaciones desde `tests/`.
+1. Crea venv e instala dependencias Python:
+   `pip install -e .`
+2. Instala tooling Node para sync de scripts:
+   `npm ci`
+3. Levanta servicios locales:
+   `docker compose -f ops/docker-compose.yml up -d`
+4. Corre validación base:
+   `pytest -q tests/unit tests/e2e tests/operator_console`
 
-## Operator Console MVP (deploy hoy)
+## Operator Console
 
-UI propia para operar clientes y automatizaciones usando Windmill/API como motor.
+- Código: `apps/operator_console/`
+- Compose local: `ops/deploy/operator-console.compose.yml`
+- Compose VPS + TLS edge: `ops/deploy/operator-console.vps.compose.yml`
+- Env ejemplo local: `ops/deploy/.env.operator-console.example`
+- Env ejemplo VPS: `ops/deploy/.env.operator-console.vps.example`
 
-- Codigo: `apps/operator_console/`
-- Compose: `ops/deploy/operator-console.compose.yml`
-- Compose VPS TLS (edge dedicado): `ops/deploy/operator-console.vps.compose.yml`
-- Env ejemplo: `ops/deploy/.env.operator-console.example`
+### Reglas de runtime (producción)
 
-Despliegue rapido:
+- `OPERATOR_ENV=production`
+- `OPERATOR_DB_URL` obligatorio (no fallback a SQLite)
+- `OPERATOR_ALLOWED_ORIGINS` obligatorio y sin `*`
+- `OPERATOR_ALLOWED_ENDPOINT_HOSTS` obligatorio
+- `OPERATOR_TOKEN_TARGET_HOSTS` debe ser subset de `OPERATOR_ALLOWED_ENDPOINT_HOSTS`
 
-1. Copiar variables:
-   `cp ops/deploy/.env.operator-console.example ops/deploy/.env`
-2. Ajustar credenciales seguras en `ops/deploy/.env`.
-3. Levantar:
-   `docker compose --env-file ops/deploy/.env -f ops/deploy/operator-console.compose.yml up -d --build`
-4. Abrir:
-   `http://<tu-servidor>:8088`
+## Deploy VPS
 
-Checklist lanzamiento real:
+- Workflow: `.github/workflows/deploy_vps.yml`
+- Preflight de secretos: `ops/deploy/preflight_vps.sh`
+- Runbook operativo: `ops/deploy/VPS_GO_LIVE.md`
+- Backup/restore: `ops/deploy/backup_pg.sh` y `ops/deploy/restore_pg.sh`
 
-1. Define `OPERATOR_ENV=production`.
-2. Cambia `OPERATOR_ADMIN_PASSWORD` y `OPERATOR_JWT_SECRET` por valores fuertes.
-3. Usa `OPERATOR_DB_URL` contra PostgreSQL administrado (evita SQLite en VPS).
-4. En la UI entra con un tenant (ejemplo `cyn`, `acme`, `clinic_01`).
-5. Cada request queda aislado por tenant via header `X-Operator-Tenant`.
-6. Configura `OPERATOR_ALLOWED_ENDPOINT_HOSTS` y `OPERATOR_TOKEN_TARGET_HOSTS`.
-7. En produccion define `OPERATOR_ALLOWED_ORIGINS` sin wildcard y `OPERATOR_DB_URL` obligatorio.
+Nota: el job `deploy-vps` hace skip automático en push si faltan secrets de repositorio (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_DEPLOY_PATH`).
 
-## VPS production checklist
+## Sync de scripts a Windmill
 
-- Runbook completo: `ops/deploy/VPS_GO_LIVE.md`
-- Variables Cyn VPS: `ops/deploy/.env.cyn.vps.example`
-- Variables Operator VPS: `ops/deploy/.env.operator-console.vps.example`
-- Backup PostgreSQL: `ops/deploy/backup_pg.sh`
-- Restore PostgreSQL: `ops/deploy/restore_pg.sh`
-- Preflight de secretos VPS: `ops/deploy/preflight_vps.sh`
-- CI/CD deploy: `.github/workflows/deploy_vps.yml`
-
-## Script sync to Windmill
-
-El script `tools/deploy_scripts.js` ya no usa tokens hardcodeados.
-Dependencias Node reproducibles en `package.json` + `package-lock.json`.
+Script: `tools/deploy_scripts.js`
 
 Variables requeridas:
 
 - `WM_TOKEN`
-- `WM_BASE_URL` (ejemplo: `https://windmill.tudominio.com/api`)
+- `WM_BASE_URL` (ejemplo `https://windmill.tudominio.com/api`)
 - `WM_WORKSPACE`
 - opcional `WM_SCRIPTS_ROOT`
 
-Instalacion y uso:
+Ejecución:
 
-- `npm ci`
 - `npm run deploy:scripts`
 
-## CI
+## Testing
 
-El workflow de CI esta en `.github/workflows/ci.yml` y valida:
-
-- lint y typing
-- pruebas unitarias/e2e
-- smoke de migraciones SQL
-- escaneo de secretos
+- Suite base CI/local:
+  `pytest -q tests/unit tests/e2e tests/operator_console`
+- Suite completa (incluye manual/integración/load):
+  `pytest -q --run-integration --run-manual --run-load`
 
 ## Seguridad
 
-- No guardar credenciales reales en el repo.
-- Usar archivos `.example` y variables de entorno.
-- Rotar cualquier secreto historico expuesto previamente.
+- Nunca subir secretos reales al repo.
+- Usar únicamente archivos `.example` para configuración.
+- Rotar cualquier secreto histórico y mantener allowlists cerradas en producción.
